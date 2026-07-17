@@ -179,6 +179,8 @@ Tím je hotovo lokálně — `npm run dev` a `http://localhost:5173/admin.html` 
 
 ## Nasazení dvou webů z jednoho repozitáře
 
+> Web se nezobrazuje správně nebo hází chybu v konzoli prohlížeče? Mrkněte do [`TROUBLESHOOTING.md`](./TROUBLESHOOTING.md) — pokrývá nejčastější zádrhel (chyba `'text/jsx' is not a valid JavaScript MIME type` a jemu podobné).
+
 Nejdřív nahrajte celý repozitář na GitHub:
 
 ```bash
@@ -217,3 +219,28 @@ U správce domény `progma.cz` (registrátor nebo DNS provider) přidejte:
 DNS změny se mohou promítnout až několik hodin. Vercel automaticky vydá HTTPS certifikát pro obě domény, jakmile DNS ukazuje správně.
 
 Od teď: každý `git push` na `main` automaticky přebuildí a nasadí **oba** weby zároveň (Vercel spustí obě konfigurace, protože jsou to dva propojené projekty na stejném repozitáři).
+
+## Alternativa: nasazení hlavního webu na GitHub Pages
+
+Pokud chcete `progma.cz` mít přes GitHub Pages místo Vercelu, jde to, ale **jen pro veřejný web** — vysvětlení proč u Progma OS níže.
+
+**Co se běžně stane, když v Settings → Pages necháte "Deploy from a branch":** GitHub servíruje soubory z repozitáře přesně tak, jak jsou, bez sestavení. Jenže `index.html` v tomhle projektu odkazuje na nezkompilovaný React/JSX kód (`/src/main.jsx`), který prohlížeč neumí spustit sám o sobě — proto se DNS připojí v pořádku (zelené "DNS check successful"), ale stránka zůstane prázdná. Potřebuje se `npm run build` — přesně to, co jinak dělá Vercel/Netlify automaticky.
+
+**Oprava — možnost A, automaticky (workflow už je v repozitáři, `.github/workflows/deploy-pages.yml`):**
+
+1. V repozitáři na GitHubu: **Settings → Pages → Build and deployment → Source** přepněte z "Deploy from a branch" na **"GitHub Actions"**.
+2. Zkontrolujte, že `public/CNAME` obsahuje vaši doménu (`progma.cz`) — je tam už připravený, GitHub Pages ho potřebuje, aby si vlastní doménu pamatoval i po každém novém nasazení.
+3. Po dalším `git push` na `main` se v záložce **Actions** spustí workflow, který projekt sestaví a nasadí. První běh trvá cca minutu.
+4. Pole "Custom domain" v Settings → Pages nechte beze změny (`progma.cz` už tam máte a DNS funguje) — mění se jen zdroj nasazení, ne doména.
+
+**Oprava — možnost B, ručně přes `npm run deploy`:** pokud radši sestavujete lokálně sami (jak jste zkoušeli), použijte balíček [`gh-pages`](https://www.npmjs.com/package/gh-pages), který je už v projektu připravený:
+
+```bash
+npm run deploy
+```
+
+Tenhle příkaz udělá `npm run build` a pak sám nahraje **jen obsah `dist/`** (ne celý projekt) do samostatné větve `gh-pages` — přesně tam, odkud to GitHub Pages umí servírovat bez zmatků s `.gitignore` nebo podsložkami. V **Settings → Pages → Source** pak zvolte "Deploy from a branch", větev `gh-pages`, složka `/ (root)`. Při každé změně webu pak stačí znovu spustit `npm run deploy`.
+
+Nepoužívejte možnost A i B zároveň zbytečně — stačí jedna. Actions (možnost A) je pohodlnější, protože nemusíte na nic pamatovat; `npm run deploy` (možnost B) dává větší kontrolu nad tím, kdy přesně se web aktualizuje.
+
+**Proč Progma OS (admin.progma.cz) takhle nejde:** GitHub Pages umí na jeden repozitář napojit jen jednu vlastní doménu. Vercel to obchází tak, že stejný repozitář naimportujete jako dva samostatné projekty (viz výše) — na GitHub Pages by to znamenalo založit **druhý, samostatný repozitář** jen pro Progma OS. Je to řešitelné, ale je to zbytečná práce navíc oproti Vercelu, který tohle zvládá nativně a k tomu ještě férově zvládá proměnné prostředí pro Supabase. Pokud chcete Progma OS opravdu nasadit, doporučuju se u něj držet Vercelu/Netlify i kdyby hlavní web běžel na GitHub Pages — klidně napište, pomůžu založit ten druhý repozitář, kdybyste přesto chtěli zůstat čistě u GitHubu.
