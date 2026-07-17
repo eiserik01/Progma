@@ -147,33 +147,33 @@ const PRICING_TIERS = [
 
 const TEAM = [
   {
-    name: "Erik",
+    name: "Erik Eis",
     role: "Strategie & Výkon",
     icon: LineChart,
     bio: "Za každou úspěšnou kampaní stojí přesná strategie. Erik navrhuje systémy, které z reklamního rozpočtu dělají předvídatelný zdroj poptávek — měřeno, testováno, doladěno k dokonalosti.",
     bioLong:
       "Erik stál u zrodu Progma s jasnou představou: marketing pro řemeslné a lokální firmy se většinou dělá špatně — nahodile, bez čísel, bez odpovědnosti. Roky sledoval, jak majitelé firem platí za reklamy, které nikam nevedou, a rozhodl se to změnit.\n\nDnes navrhuje strategie, které mají jeden jediný cíl: aby se každá investovaná koruna vrátila jako nová poptávka. Nemá rád marketingový žargon a prázdné fráze — když vám něco vysvětluje, uslyšíte čísla, ne buzzwordy. Na schůzkách je to on, kdo dokáže za pět minut ukázat, kde firma zbytečně ztrácí peníze.",
-    initials: "EK",
+    initials: "EE",
     photo: "/team/erik.jpg",
   },
   {
-    name: "Adam",
+    name: "Adam Kryštof",
     role: "Obchod & Klientský růst",
     icon: Handshake,
     bio: "Adam je spojka mezi vaší firmou a výsledky. Stará se, aby každý klient přesně věděl, kam kampaně směřují, a aby se z poptávky stala reálná zakázka — ne jen číslo v tabulce.",
     bioLong:
-      "Adam je první člověk, se kterým si většina klientů promluví — a ten, komu volají, když potřebují něco vyřešit rychle. Baví ho budovat vztahy, které vydrží roky, ne jednorázové zakázky na jednu kampaň.\n\nPřed Progma roky prodával v terénu a naučil se jednu věc, která platí i dnes: lidé nekupují služby, kupují důvěru. Ke každému klientovi proto přistupuje jako k dlouhodobému partnerství — s kalkulačkou v jedné ruce a upřímností ve druhé. Je to on, kdo na schůzce vytáhne kalkulaci a vysvětlí ji tak, aby dávala smysl i bez marketingového vzdělání.",
-    initials: "AD",
+      "Adam je první zastupující firmy při oslovení potencionálního zákazníka a ten, kdo s ním komunikuje a zodpovídá za rychlé vyřešení a odbavení požadavku.  Adam se zabýval budováním vztahů s obchodními partnery už před vznikem Progmy a stál u zrození také několika spoluprací, mimo jiné i s úspěšnými podnikateli a majiteli firem. Jeho styl komunikace a kvality jsou jedna z věcí, proč právě on je ten, kdo klienty oslovuje.  Lidé nekupují pouze službu, ale i důvěru. Právě proto ke každému klientovi přistupuje jako k dlouhodobému partnerství. Adam je ten, kdo na schůzce vysvětlí kalkulaci tak, aby dávala smysl i těm bez marketingového vzdělání.",
+    initials: "AK",
     photo: "/team/adam.jpg",
   },
   {
-    name: "Mako",
-    role: "Kreativa & Video produkce",
+    name: "Jan Makovický",
+    role: "Kreativita & Video produkce",
     icon: Camera,
     bio: "Kamera, střih, příběh. Mako proměňuje běžný pracovní den vaší firmy v obsah, který lidi zastaví u scrollování — a přesvědčí je, že vy jste ta správná volba.",
     bioLong:
-      "Mako natočil stovky hodin záběrů ze stavenišť, dílen, servisů a provozoven po celé republice — a ví, že nejlepší reklama nevypadá jako reklama. Jeho přístup je jednoduchý: ukázat řemeslo takové, jaké skutečně je, bez zbytečné okázalosti.\n\nZa kamerou i u střihu hledá autentický moment — tu vteřinu, kdy se z běžného pracovního dne stane obsah, který lidi zastaví u scrollování. Technika je pro něj prostředek, ne cíl. Na natáčení u klienta se snaží být co nejméně vidět, aby zůstal zachycený skutečný provoz firmy, ne nastudovaná scénka.",
-    initials: "MK",
+      "Mako natočil stovky hodin záběrů ze sportovních událostí, cestování, servisů a provozoven po celé republice — a ví, že nejlepší reklama nevypadá jako reklama. Jeho přístup je jednoduchý: ukázat řemeslo takové, jaké skutečně je, bez zbytečné okázalosti.\n\nZa kamerou i u střihu hledá autentický moment — tu vteřinu, kdy se z běžného pracovního dne stane obsah, který lidi zastaví u scrollování. Technika je pro něj prostředek, ne cíl. Na natáčení u klienta se snaží být co nejméně vidět, aby zůstal zachycený skutečný provoz firmy, ne nastudovaná scénka.",
+    initials: "JM",
     photo: "/team/mako.jpg",
   },
 ];
