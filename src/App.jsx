@@ -170,9 +170,9 @@ const TEAM = [
     name: "Jan Makovický",
     role: "Kreativita & Video produkce",
     icon: Camera,
-    bio: "Kamera, střih, příběh. Mako proměňuje běžný pracovní den vaší firmy v obsah, který lidi zastaví u scrollování — a přesvědčí je, že vy jste ta správná volba.",
+    bio: "Kamera, střih, příběh. Honza proměňuje běžný pracovní den vaší firmy v obsah, který lidi zastaví u scrollování — a přesvědčí je, že vy jste ta správná volba.",
     bioLong:
-      "Mako natočil stovky hodin záběrů ze sportovních událostí, cestování, servisů a provozoven po celé republice — a ví, že nejlepší reklama nevypadá jako reklama. Jeho přístup je jednoduchý: ukázat řemeslo takové, jaké skutečně je, bez zbytečné okázalosti.\n\nZa kamerou i u střihu hledá autentický moment — tu vteřinu, kdy se z běžného pracovního dne stane obsah, který lidi zastaví u scrollování. Technika je pro něj prostředek, ne cíl. Na natáčení u klienta se snaží být co nejméně vidět, aby zůstal zachycený skutečný provoz firmy, ne nastudovaná scénka.",
+      "Honza natočil stovky hodin záběrů ze sportovních událostí, cestování, servisů a provozoven po celé republice — a ví, že nejlepší reklama nevypadá jako reklama. Jeho přístup je jednoduchý: ukázat řemeslo takové, jaké skutečně je, bez zbytečné okázalosti.\n\nZa kamerou i u střihu hledá autentický moment — tu vteřinu, kdy se z běžného pracovního dne stane obsah, který lidi zastaví u scrollování. Technika je pro něj prostředek, ne cíl. Na natáčení u klienta se snaží být co nejméně vidět, aby zůstal zachycený skutečný provoz firmy, ne nastudovaná scénka.",
     initials: "JM",
     photo: "/team/mako.jpg",
   },
