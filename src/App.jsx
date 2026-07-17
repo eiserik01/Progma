@@ -162,7 +162,7 @@ const TEAM = [
     icon: Handshake,
     bio: "Adam je spojka mezi vaší firmou a výsledky. Stará se, aby každý klient přesně věděl, kam kampaně směřují, a aby se z poptávky stala reálná zakázka — ne jen číslo v tabulce.",
     bioLong:
-      "Adam je první zastupující firmy při oslovení potencionálního zákazníka a ten, kdo s ním komunikuje a zodpovídá za rychlé vyřešení a odbavení požadavku.  Adam se zabýval budováním vztahů s obchodními partnery už před vznikem Progmy a stál u zrození také několika spoluprací, mimo jiné i s úspěšnými podnikateli a majiteli firem. Jeho styl komunikace a kvality jsou jedna z věcí, proč právě on je ten, kdo klienty oslovuje.  Lidé nekupují pouze službu, ale i důvěru. Právě proto ke každému klientovi přistupuje jako k dlouhodobému partnerství. Adam je ten, kdo na schůzce vysvětlí kalkulaci tak, aby dávala smysl i těm bez marketingového vzdělání.",
+      "Adam je první zastupující firmy při oslovení potencionálního zákazníka a ten, kdo s ním komunikuje a zodpovídá za rychlé vyřešení a odbavení požadavku.\n\nAdam se zabýval budováním vztahů s obchodními partnery už před vznikem Progmy a stál u zrození také několika spoluprací, mimo jiné i s úspěšnými podnikateli a majiteli firem. Jeho styl komunikace a kvality jsou jedna z věcí, proč právě on je ten, kdo klienty oslovuje.  Lidé nekupují pouze službu, ale i důvěru. Právě proto ke každému klientovi přistupuje jako k dlouhodobému partnerství. Adam je ten, kdo na schůzce vysvětlí kalkulaci tak, aby dávala smysl i těm bez marketingového vzdělání.",
     initials: "AK",
     photo: "/team/adam.jpg",
   },
