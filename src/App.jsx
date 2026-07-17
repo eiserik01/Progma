@@ -129,7 +129,8 @@ const PRICING_TIERS = [
   },
   {
     name: "Dominance",
-    price: "individuální",
+    price: "Individuální",
+    priceOnRequest: true,
     tagline: "Agresivní růst a tržní dominance",
     features: [
       "Vše z Výkonu",
@@ -146,33 +147,33 @@ const PRICING_TIERS = [
 
 const TEAM = [
   {
-    name: "Erik Eis",
+    name: "Erik",
     role: "Strategie & Výkon",
     icon: LineChart,
     bio: "Za každou úspěšnou kampaní stojí přesná strategie. Erik navrhuje systémy, které z reklamního rozpočtu dělají předvídatelný zdroj poptávek — měřeno, testováno, doladěno k dokonalosti.",
     bioLong:
-      "Erik stál u zrodu Progmy s jasnou představou: marketing pro řemeslné a lokální firmy se většinou dělá špatně — nahodile, bez čísel, bez odpovědnosti. Roky sledoval, jak majitelé firem platí za reklamy, které nikam nevedou, a rozhodl se to změnit.\n\nDnes navrhuje strategie, které mají jeden jediný cíl: aby se každá investovaná koruna vrátila jako nová poptávka. Nemá rád marketingový žargon a prázdné fráze — když vám něco vysvětluje, uslyšíte čísla, ne buzzwordy. Na schůzkách je to on, kdo dokáže za pět minut ukázat, kde firma zbytečně ztrácí peníze.",
-    initials: "EE",
+      "Erik stál u zrodu Progma s jasnou představou: marketing pro řemeslné a lokální firmy se většinou dělá špatně — nahodile, bez čísel, bez odpovědnosti. Roky sledoval, jak majitelé firem platí za reklamy, které nikam nevedou, a rozhodl se to změnit.\n\nDnes navrhuje strategie, které mají jeden jediný cíl: aby se každá investovaná koruna vrátila jako nová poptávka. Nemá rád marketingový žargon a prázdné fráze — když vám něco vysvětluje, uslyšíte čísla, ne buzzwordy. Na schůzkách je to on, kdo dokáže za pět minut ukázat, kde firma zbytečně ztrácí peníze.",
+    initials: "EK",
     photo: "/team/erik.jpg",
   },
   {
-    name: "Adam Kryštof",
+    name: "Adam",
     role: "Obchod & Klientský růst",
     icon: Handshake,
     bio: "Adam je spojka mezi vaší firmou a výsledky. Stará se, aby každý klient přesně věděl, kam kampaně směřují, a aby se z poptávky stala reálná zakázka — ne jen číslo v tabulce.",
     bioLong:
-      "Adam je první člověk, se kterým si většina klientů promluví — a ten, komu volají, když potřebují něco vyřešit rychle. Baví ho budovat vztahy, které vydrží roky, ne jednorázové zakázky na jednu kampaň.\n\nPřed Progmou roky prodával v terénu a naučil se jednu věc, která platí i dnes: lidé nekupují služby, kupují důvěru. Ke každému klientovi proto přistupuje jako k dlouhodobému partnerství — s kalkulačkou v jedné ruce a upřímností ve druhé. Je to on, kdo na schůzce vytáhne kalkulaci a vysvětlí ji tak, aby dávala smysl i bez marketingového vzdělání.",
-    initials: "AK",
+      "Adam je první člověk, se kterým si většina klientů promluví — a ten, komu volají, když potřebují něco vyřešit rychle. Baví ho budovat vztahy, které vydrží roky, ne jednorázové zakázky na jednu kampaň.\n\nPřed Progma roky prodával v terénu a naučil se jednu věc, která platí i dnes: lidé nekupují služby, kupují důvěru. Ke každému klientovi proto přistupuje jako k dlouhodobému partnerství — s kalkulačkou v jedné ruce a upřímností ve druhé. Je to on, kdo na schůzce vytáhne kalkulaci a vysvětlí ji tak, aby dávala smysl i bez marketingového vzdělání.",
+    initials: "AD",
     photo: "/team/adam.jpg",
   },
   {
-    name: "Jan Makovický",
+    name: "Mako",
     role: "Kreativa & Video produkce",
     icon: Camera,
-    bio: "Kamera, střih, příběh. Honza proměňuje běžný pracovní den vaší firmy v obsah, který lidi zastaví u scrollování — a přesvědčí je, že vy jste ta správná volba.",
+    bio: "Kamera, střih, příběh. Mako proměňuje běžný pracovní den vaší firmy v obsah, který lidi zastaví u scrollování — a přesvědčí je, že vy jste ta správná volba.",
     bioLong:
-      "Honza natočil stovky hodin záběrů ze sportovních událostí, cestování, servisů a provozoven po celé republice — a ví, že nejlepší reklama nevypadá jako reklama. Jeho přístup je jednoduchý: ukázat řemeslo takové, jaké skutečně je, bez zbytečné okázalosti.\n\nZa kamerou i u střihu hledá autentický moment — tu vteřinu, kdy se z běžného pracovního dne stane obsah, který lidi zastaví u scrollování. Technika je pro něj prostředek, ne cíl. Na natáčení u klienta se snaží být co nejméně vidět, aby zůstal zachycený skutečný provoz firmy, ne nastudovaná scénka.",
-    initials: "JM",
+      "Mako natočil stovky hodin záběrů ze stavenišť, dílen, servisů a provozoven po celé republice — a ví, že nejlepší reklama nevypadá jako reklama. Jeho přístup je jednoduchý: ukázat řemeslo takové, jaké skutečně je, bez zbytečné okázalosti.\n\nZa kamerou i u střihu hledá autentický moment — tu vteřinu, kdy se z běžného pracovního dne stane obsah, který lidi zastaví u scrollování. Technika je pro něj prostředek, ne cíl. Na natáčení u klienta se snaží být co nejméně vidět, aby zůstal zachycený skutečný provoz firmy, ne nastudovaná scénka.",
+    initials: "MK",
     photo: "/team/mako.jpg",
   },
 ];
@@ -210,10 +211,10 @@ function GridTexture({ className = "" }) {
  * Ambient showreel background for the hero.
  *
  * - Always shows a static poster first (fast paint, works everywhere).
- * - Only mounts the actual <video> on desktop widths where the visitor
- *   hasn't asked for reduced motion — mobile users never download it.
- * - A small toggle lets anyone stop the motion manually, on top of the
- *   automatic prefers-reduced-motion check.
+ * - Plays on both desktop and mobile — skipped only when the visitor has
+ *   asked for reduced motion, or the browser reports Data Saver mode / a
+ *   slow connection (where supported; Safari/iOS doesn't expose this, so
+ *   video plays there by default).
  *
  * Drop your files in /public as:
  *   showreel.webm        (preferred, smaller)
@@ -225,9 +226,12 @@ function HeroVideoBackground() {
   const [posterError, setPosterError] = useState(false);
 
   useEffect(() => {
-    const isDesktop = window.matchMedia("(min-width: 768px)").matches;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setShowVideo(isDesktop && !reducedMotion);
+    // Network Information API isn't supported everywhere (notably Safari/iOS) —
+    // where it's missing we simply can't tell, so we don't block video on it.
+    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    const dataConscious = Boolean(conn?.saveData) || ["slow-2g", "2g", "3g"].includes(conn?.effectiveType);
+    setShowVideo(!reducedMotion && !dataConscious);
   }, []);
 
   return (
@@ -239,7 +243,7 @@ function HeroVideoBackground() {
           src="/showreel-poster.jpg"
           alt=""
           onError={() => setPosterError(true)}
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover object-top"
         />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-violet-950 via-zinc-950 to-zinc-950" />
@@ -247,7 +251,7 @@ function HeroVideoBackground() {
 
       {showVideo && (
         <video
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover object-top"
           autoPlay
           muted
           loop
@@ -407,7 +411,7 @@ function Hero() {
   ];
 
   return (
-    <section id="top" className="relative overflow-hidden pt-40 pb-24 sm:pt-48 sm:pb-32 px-6 sm:px-8 lg:px-12">
+    <section id="top" className="relative overflow-hidden pt-32 pb-16 sm:pt-48 sm:pb-32 px-6 sm:px-8 lg:px-12">
       <HeroVideoBackground />
       <GlowOrb className="w-96 h-96 top-20 -right-40" color="rgba(202,92,246,0.18)" />
 
@@ -553,7 +557,7 @@ function WhyUs() {
       <div className="relative max-w-7xl mx-auto">
         <SectionHeading
           eyebrow="Proč Progma"
-          title="Nejlepší obchodní rozhodnutí, které letos uděláte."
+          title="Nejlepší obchodní rozhodnutí, které letos uděláte"
           sub="Jsme partner, kterému jde o vaše tržby stejně jako vám."
         />
 
@@ -612,7 +616,7 @@ function Pricing() {
           align="center"
         />
 
-        <div className="grid lg:grid-cols-3 gap-6 items-start">
+        <div className="grid lg:grid-cols-3 gap-x-6 gap-y-12 lg:gap-y-6 items-start">
           {PRICING_TIERS.map((tier, i) => (
             <motion.div
               key={i}
@@ -635,10 +639,17 @@ function Pricing() {
               <h3 className="font-display text-2xl font-semibold text-white mb-1">{tier.name}</h3>
               <p className="text-sm text-zinc-400 mb-6">{tier.tagline}</p>
 
-              <div className="mb-8 flex items-baseline gap-1">
-                <span className="font-jb text-4xl sm:text-5xl font-bold text-white">{tier.price}</span>
-                <span className="text-zinc-400 text-sm">Kč / měsíc</span>
-              </div>
+              {tier.priceOnRequest ? (
+                <div className="mb-8">
+                  <span className="font-display text-3xl sm:text-4xl font-bold text-white">Individuální</span>
+                  <p className="text-zinc-400 text-sm mt-1.5">Cena na míru podle rozsahu spolupráce</p>
+                </div>
+              ) : (
+                <div className="mb-8 flex items-baseline gap-1">
+                  <span className="font-jb text-4xl sm:text-5xl font-bold text-white">{tier.price}</span>
+                  <span className="text-zinc-400 text-sm">Kč / měsíc</span>
+                </div>
+              )}
 
               <ul className="space-y-3.5 mb-9 flex-1">
                 {tier.features.map((f, j) => (
@@ -679,6 +690,40 @@ function Pricing() {
 
 /* ============================== TEAM ============================== */
 
+function TeamDetailContent({ person }) {
+  return (
+    <div className="grid sm:grid-cols-5 gap-8 sm:gap-10 items-start">
+      <div className="sm:col-span-2">
+        {person.photo ? (
+          <img
+            src={person.photo}
+            alt={person.name}
+            className="w-full aspect-square rounded-2xl object-cover shadow-2xl shadow-violet-950/50"
+          />
+        ) : (
+          <div className="w-full aspect-square rounded-2xl bg-gradient-to-br from-violet-500 to-violet-800 flex items-center justify-center font-display text-5xl font-bold text-white shadow-2xl shadow-violet-950/50">
+            {person.initials}
+          </div>
+        )}
+      </div>
+      <div className="sm:col-span-3">
+        <div className="flex items-center gap-2 mb-2">
+          <person.icon className="w-4 h-4 text-violet-400" />
+          <span className="font-jb text-xs uppercase tracking-wide text-violet-300">{person.role}</span>
+        </div>
+        <h3 className="font-display text-2xl sm:text-3xl font-semibold text-white mb-5">{person.name}</h3>
+        <div className="space-y-4">
+          {person.bioLong.split("\n\n").map((para, i) => (
+            <p key={i} className="text-sm sm:text-base text-zinc-300 leading-relaxed">
+              {para}
+            </p>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Team() {
   const [selected, setSelected] = useState(0);
   const person = TEAM[selected];
@@ -692,92 +737,87 @@ function Team() {
           sub="Žádný přeprodávaný tým na volné noze. Tři specialisté, kteří na vašem účtu skutečně pracují — každý den. Klikněte na někoho z nich a přečtěte si víc."
         />
 
-        <div className="grid md:grid-cols-3 gap-6 mb-6">
+        <div className="grid md:grid-cols-3 gap-6 mb-6 md:items-start">
           {TEAM.map((m, i) => {
             const active = i === selected;
             return (
-              <motion.button
-                key={i}
-                onClick={() => setSelected(i)}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-60px" }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                className={`text-left relative rounded-3xl border transition-colors duration-300 p-8 ${
-                  active ? "border-violet-500 bg-violet-500/10" : "border-white/10 bg-white/5 hover:border-violet-500/40"
-                }`}
-              >
-                <div className="flex items-center gap-4 mb-6">
-                  {m.photo ? (
-                    <img
-                      src={m.photo}
-                      alt={m.name}
-                      className="w-14 h-14 rounded-2xl object-cover shadow-lg shadow-violet-900/40"
-                    />
-                  ) : (
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-800 flex items-center justify-center font-display text-lg font-bold text-white shadow-lg shadow-violet-900/40">
-                      {m.initials}
-                    </div>
-                  )}
-                  <div>
-                    <h3 className="font-display text-lg font-semibold text-white">{m.name}</h3>
-                    <span className="font-jb text-xs uppercase tracking-wide text-violet-300">{m.role}</span>
-                  </div>
-                </div>
-                <p className="text-sm text-zinc-400 leading-relaxed">{m.bio}</p>
-                <div
-                  className={`flex items-center gap-1.5 mt-5 text-xs font-semibold transition-colors ${
-                    active ? "text-violet-300" : "text-zinc-600"
+              <div key={i}>
+                <motion.button
+                  onClick={() => setSelected(i)}
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-60px" }}
+                  transition={{ duration: 0.5, delay: i * 0.1 }}
+                  className={`w-full text-left relative rounded-3xl border transition-colors duration-300 p-8 ${
+                    active ? "border-violet-500 bg-violet-500/10" : "border-white/10 bg-white/5 hover:border-violet-500/40"
                   }`}
                 >
-                  {active ? "Zobrazeno níže" : "Zjistit více"}
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-4 mb-6">
+                    {m.photo ? (
+                      <img
+                        src={m.photo}
+                        alt={m.name}
+                        className="w-14 h-14 rounded-2xl object-cover shadow-lg shadow-violet-900/40"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-800 flex items-center justify-center font-display text-lg font-bold text-white shadow-lg shadow-violet-900/40">
+                        {m.initials}
+                      </div>
+                    )}
+                    <div>
+                      <h3 className="font-display text-lg font-semibold text-white">{m.name}</h3>
+                      <span className="font-jb text-xs uppercase tracking-wide text-violet-300">{m.role}</span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-zinc-400 leading-relaxed">{m.bio}</p>
+                  <div
+                    className={`flex items-center gap-1.5 mt-5 text-xs font-semibold transition-colors ${
+                      active ? "text-violet-300" : "text-zinc-600"
+                    }`}
+                  >
+                    {active ? "Zobrazeno níže" : "Zjistit více"}
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </div>
+                </motion.button>
+
+                {/* Mobile only: detail expands right under this card, not after the whole row */}
+                <div className="md:hidden">
+                  <AnimatePresence>
+                    {active && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-4 rounded-3xl border border-violet-500/30 bg-gradient-to-b from-violet-950/40 to-white/5 p-6">
+                          <TeamDetailContent person={m} />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-              </motion.button>
+              </div>
             );
           })}
         </div>
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={selected}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -16 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-            className="rounded-3xl border border-violet-500/30 bg-gradient-to-b from-violet-950/40 to-white/5 p-8 sm:p-10"
-          >
-            <div className="grid sm:grid-cols-5 gap-8 sm:gap-10 items-start">
-              <div className="sm:col-span-2">
-                {person.photo ? (
-                  <img
-                    src={person.photo}
-                    alt={person.name}
-                    className="w-full aspect-square rounded-2xl object-cover shadow-2xl shadow-violet-950/50"
-                  />
-                ) : (
-                  <div className="w-full aspect-square rounded-2xl bg-gradient-to-br from-violet-500 to-violet-800 flex items-center justify-center font-display text-5xl font-bold text-white shadow-2xl shadow-violet-950/50">
-                    {person.initials}
-                  </div>
-                )}
-              </div>
-              <div className="sm:col-span-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <person.icon className="w-4 h-4 text-violet-400" />
-                  <span className="font-jb text-xs uppercase tracking-wide text-violet-300">{person.role}</span>
-                </div>
-                <h3 className="font-display text-2xl sm:text-3xl font-semibold text-white mb-5">{person.name}</h3>
-                <div className="space-y-4">
-                  {person.bioLong.split("\n\n").map((para, i) => (
-                    <p key={i} className="text-sm sm:text-base text-zinc-300 leading-relaxed">
-                      {para}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </AnimatePresence>
+        {/* Desktop only: one shared spotlight panel below the row of cards */}
+        <div className="hidden md:block">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={selected}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.35, ease: "easeOut" }}
+              className="rounded-3xl border border-violet-500/30 bg-gradient-to-b from-violet-950/40 to-white/5 p-8 sm:p-10"
+            >
+              <TeamDetailContent person={person} />
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
     </section>
   );
