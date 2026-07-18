@@ -152,7 +152,7 @@ const TEAM = [
     icon: LineChart,
     bio: "Za každou úspěšnou kampaní stojí přesná strategie. Erik navrhuje systémy, které z reklamního rozpočtu dělají předvídatelný zdroj poptávek — měřeno, testováno, doladěno k dokonalosti.",
     bioLong:
-      "Erik stál u zrodu Progma s jasnou představou: marketing pro řemeslné a lokální firmy se většinou dělá špatně — nahodile, bez čísel, bez odpovědnosti. Roky sledoval, jak majitelé firem platí za reklamy, které nikam nevedou, a rozhodl se to změnit.\n\nDnes navrhuje strategie, které mají jeden jediný cíl: aby se každá investovaná koruna vrátila jako nová poptávka. Nemá rád marketingový žargon a prázdné fráze — když vám něco vysvětluje, uslyšíte čísla, ne buzzwordy. Na schůzkách je to on, kdo dokáže za pět minut ukázat, kde firma zbytečně ztrácí peníze.",
+      "Erik stál u zrodu Progma s jasnou představou: marketing pro řemeslné a lokální firmy se většinou dělá špatně — nahodile, bez čísel, bez odpovědnosti. Roky sledoval, jak majitelé firem platí za reklamy, které nikam nevedou, a rozhodl se to změnit.\n\nDnes navrhuje strategie, které mají jeden jediný cíl: aby se každá investovaná koruna vrátila jako nová poptávka. Nemá rád marketingové prázdné fráze — když vám něco vysvětluje, uslyšíte čísla a grafy. Na schůzkách je to on, kdo dokáže za pět minut ukázat, kde firma zbytečně ztrácí peníze.",
     initials: "EE",
     photo: "/team/erik.jpg",
   },
