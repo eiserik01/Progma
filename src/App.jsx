@@ -152,7 +152,7 @@ const TEAM = [
     icon: LineChart,
     bio: "Za každou úspěšnou kampaní stojí přesná strategie. Erik navrhuje systémy, které z reklamního rozpočtu dělají předvídatelný zdroj poptávek — měřeno, testováno, doladěno k dokonalosti.",
     bioLong:
-      "Erik stál u zrodu Progma s jasnou představou: marketing pro řemeslné a lokální firmy se většinou dělá špatně — nahodile, bez čísel, bez odpovědnosti. Roky sledoval, jak majitelé firem platí za reklamy, které nikam nevedou, a rozhodl se to změnit.\n\nDnes navrhuje strategie, které mají jeden jediný cíl: aby se každá investovaná koruna vrátila jako nová poptávka. Nemá rád marketingové prázdné fráze — když vám něco vysvětluje, uslyšíte čísla a grafy. Na schůzkách je to on, kdo dokáže za pět minut ukázat, kde firma zbytečně ztrácí peníze.",
+      "Erik stál u zrodu Progmy s jasnou představou: marketing pro řemeslné a lokální firmy se většinou dělá špatně — nahodile, bez čísel, bez odpovědnosti. Roky sledoval, jak majitelé firem platí za reklamy, které nikam nevedou, a rozhodl se to změnit.\n\nDnes navrhuje strategie, které mají jeden jediný cíl: aby se každá investovaná koruna vrátila jako nová poptávka. Nemá rád marketingové prázdné fráze — když vám něco vysvětluje, uslyšíte čísla a grafy. Na schůzkách je to on, kdo dokáže za pět minut ukázat, kde firma zbytečně ztrácí peníze.",
     initials: "EE",
     photo: "/team/erik.jpg",
   },
@@ -557,7 +557,7 @@ function WhyUs() {
       <div className="relative max-w-7xl mx-auto">
         <SectionHeading
           eyebrow="Proč Progma"
-          title="Nejlepší obchodní rozhodnutí, které letos uděláte"
+          title="Nejlepší obchodní rozhodnutí, které letos uděláte."
           sub="Jsme partner, kterému jde o vaše tržby stejně jako vám."
         />
 
@@ -611,7 +611,7 @@ function Pricing() {
       <div className="max-w-7xl mx-auto">
         <SectionHeading
           eyebrow="Investice, ne náklad"
-          title="Vyberte si tempo, kterým chcete růst"
+          title="Vyberte si tempo, kterým chcete růst."
           sub="Žádné skryté poplatky, žádné dlouhodobé zámky, které vás svazují. Jen tempo růstu, které si zvolíte sami."
           align="center"
         />
