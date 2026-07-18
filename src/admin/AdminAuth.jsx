@@ -6,21 +6,27 @@ function MissingConfig() {
   return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-6 font-body antialiased">
       <div className="max-w-md text-center">
-        <h1 className="font-display text-lg font-semibold text-white mb-3">Supabase není nastavený</h1>
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-400 to-violet-700 flex items-center justify-center mx-auto mb-5">
+          <span className="font-display text-base font-bold text-white">P</span>
+        </div>
+        <h1 className="font-display text-lg font-semibold text-white mb-3">Systém není připraven</h1>
         <p className="text-sm text-zinc-400 leading-relaxed">
-          Chybí proměnné prostředí <code className="text-violet-300 font-jb">VITE_SUPABASE_URL</code> a{" "}
-          <code className="text-violet-300 font-jb">VITE_SUPABASE_ANON_KEY</code>. Postup nastavení je v README,
-          sekce „Supabase — sdílená data a přihlašování".
+          Chybí připojení k databázi. Zkontrolujte proměnné prostředí{" "}
+          <code className="text-violet-300 font-jb">VITE_SUPABASE_URL</code> a{" "}
+          <code className="text-violet-300 font-jb">VITE_SUPABASE_ANON_KEY</code> — postup je v README.
         </p>
       </div>
     </div>
   );
 }
 
-function LoadingScreen() {
+export function LoadingScreen() {
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-      <span className="text-sm text-zinc-500">Načítám…</span>
+    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4">
+      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-400 to-violet-700 flex items-center justify-center animate-pulse-glow">
+        <span className="font-display text-base font-bold text-white">P</span>
+      </div>
+      <span className="text-xs font-jb uppercase tracking-widest text-zinc-600">Načítám</span>
     </div>
   );
 }
@@ -78,10 +84,6 @@ function LoginForm() {
         >
           {submitting ? "Přihlašuji…" : "Přihlásit se"}
         </button>
-
-        <p className="text-xs text-zinc-600 mt-4 text-center">
-          Účty zakládá administrátor v Supabase Dashboardu — registrace tu není.
-        </p>
       </form>
     </div>
   );

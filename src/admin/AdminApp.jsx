@@ -31,9 +31,14 @@ import {
   Pencil,
   AlertCircle,
   X,
+  Search,
+  Download,
+  Activity,
 } from "lucide-react";
 import { useSyncedTable } from "./useSyncedTable.js";
 import { useAuth } from "./AuthContext.js";
+import { useToast } from "./ToastContext.jsx";
+import { LoadingScreen } from "./AdminAuth.jsx";
 
 /* ============================== EMBEDDED ASSETS ============================== */
 /* Base64 payloads (logo + a Czech-diacritics-safe subset of DejaVu Sans for the
@@ -301,6 +306,26 @@ function formatDateCz(date) {
   return date.toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" });
 }
 
+function displayNameFromEmail(email) {
+  if (!email) return "Uživatel";
+  const local = email.split("@")[0];
+  return local
+    .split(/[._-]/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+// Poznámky mají datum uložené jako čitelný český řetězec ("3. 7. 2026"), ne
+// jako skutečné datum — tahle funkce ho pro řazení/výpočty zase rozebere zpátky.
+function parseCzDate(str) {
+  if (!str) return null;
+  const match = str.match(/(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/);
+  if (!match) return null;
+  const [, day, month, year] = match;
+  return new Date(Number(year), Number(month) - 1, Number(day));
+}
+
 /* ============================== PDF GENERATION ============================== */
 
 let jsPDFLoaderPromise = null;
@@ -565,8 +590,8 @@ const inputClass =
 /* ============================== SIDEBAR ============================== */
 
 function Sidebar({ activeTab, setActiveTab, userEmail, onSignOut }) {
-  const namePart = (userEmail || "?").split("@")[0];
-  const initials = namePart.slice(0, 2).toUpperCase();
+  const displayName = displayNameFromEmail(userEmail);
+  const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
     <aside className="hidden md:flex flex-col w-16 lg:w-64 shrink-0 border-r border-white/10 bg-zinc-950/80 backdrop-blur-xl h-screen sticky top-0">
@@ -607,7 +632,7 @@ function Sidebar({ activeTab, setActiveTab, userEmail, onSignOut }) {
             {initials}
           </span>
           <div className="hidden lg:block leading-tight min-w-0 flex-1">
-            <div className="text-sm text-white font-medium truncate">{userEmail || "Přihlášen"}</div>
+            <div className="text-sm text-white font-medium truncate">{displayName}</div>
             <button onClick={onSignOut} className="text-xs text-zinc-500 hover:text-violet-300 transition-colors">
               Odhlásit se
             </button>
@@ -620,7 +645,7 @@ function Sidebar({ activeTab, setActiveTab, userEmail, onSignOut }) {
 
 /* ============================== DASHBOARD ============================== */
 
-function Dashboard({ clients, tasks, updateTask, setActiveTab }) {
+function Dashboard({ clients, tasks, updateTask, setActiveTab, currentUserName, goToClient }) {
   const today = new Date().toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
   const activeClients = clients.filter((c) => c.status === "aktivni");
@@ -643,6 +668,11 @@ function Dashboard({ clients, tasks, updateTask, setActiveTab }) {
     count: clients.filter((c) => c.packageId === pkg.id).length,
   }));
 
+  const activity = clients
+    .flatMap((c) => c.notes.map((n) => ({ ...n, clientId: c.id, clientName: c.company, parsed: parseCzDate(n.date) })))
+    .sort((a, b) => (b.parsed?.getTime() || 0) - (a.parsed?.getTime() || 0))
+    .slice(0, 6);
+
   const toggleTask = (id) => {
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
@@ -659,7 +689,7 @@ function Dashboard({ clients, tasks, updateTask, setActiveTab }) {
   return (
     <div className="p-6 lg:p-10 space-y-8">
       <div>
-        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-white capitalize">Dobrý den, Eriku</h1>
+        <h1 className="font-display text-2xl lg:text-3xl font-semibold text-white capitalize">Dobrý den, {currentUserName}</h1>
         <p className="text-zinc-500 text-sm mt-1 capitalize">{today}</p>
       </div>
 
@@ -732,6 +762,36 @@ function Dashboard({ clients, tasks, updateTask, setActiveTab }) {
           </button>
         </GlassCard>
       </div>
+
+      <GlassCard className="p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <Activity className="w-4 h-4 text-violet-400" />
+          <h2 className="font-display text-lg font-semibold text-white">Poslední aktivita</h2>
+        </div>
+        {activity.length === 0 ? (
+          <p className="text-sm text-zinc-500">Zatím žádná aktivita.</p>
+        ) : (
+          <div className="space-y-1">
+            {activity.map((a, i) => (
+              <button
+                key={i}
+                onClick={() => goToClient(a.clientId)}
+                className="w-full flex items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-white/5 transition-colors"
+              >
+                <span className="w-7 h-7 rounded-full bg-violet-500/15 border border-violet-500/30 flex items-center justify-center font-jb text-xs font-semibold text-violet-300 shrink-0 mt-0.5">
+                  {a.author.slice(0, 2).toUpperCase()}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-zinc-200 truncate">{a.text}</div>
+                  <div className="text-xs text-zinc-500 mt-0.5">
+                    {a.clientName} · {a.author} · {a.date}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </GlassCard>
     </div>
   );
 }
@@ -803,13 +863,57 @@ function ClientEditForm({ initial, onSave, onCancel, saveLabel = "Uložit", savi
   );
 }
 
-function ClientsView({ clients, insertClient, updateClient, removeClient, selectedClientId, setSelectedClientId, openCalculatorFor }) {
+function ClientsView({ clients, insertClient, updateClient, removeClient, selectedClientId, setSelectedClientId, openCalculatorFor, currentUserName }) {
+  const { showToast } = useToast();
   const [editing, setEditing] = useState(false);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const client = clients.find((c) => c.id === selectedClientId) || clients[0] || null;
+
+  const filteredClients = clients.filter((c) => {
+    if (statusFilter !== "all" && c.status !== statusFilter) return false;
+    if (!search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    return (
+      c.company.toLowerCase().includes(q) ||
+      c.contact.toLowerCase().includes(q) ||
+      (c.industry || "").toLowerCase().includes(q)
+    );
+  });
+
+  const exportCsv = () => {
+    const header = ["Firma", "Kontakt", "Obor", "Stav", "Balíček", "Telefon", "E-mail", "Adresa", "IČO", "DIČ", "Klientem od"];
+    const rows = clients.map((c) => {
+      const pkg = packageById(c.packageId) || packageById(c.potentialPackageId);
+      return [
+        c.company,
+        c.contact,
+        c.industry,
+        STATUS_META[c.status]?.label || c.status,
+        pkg?.name || "",
+        c.phone,
+        c.email,
+        c.address,
+        c.ico,
+        c.dic,
+        c.since,
+      ];
+    });
+    const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const csv = [header, ...rows].map((row) => row.map(escape).join(",")).join("\r\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `progma-klienti-${formatDateCz(new Date()).replace(/\. /g, "-")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("Export klientů stažen.");
+  };
 
   const selectClient = (id) => {
     setSelectedClientId(id);
@@ -839,8 +943,10 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
     try {
       await updateClient(client.id, patchFromForm(form));
       setEditing(false);
+      showToast(`${form.company} uložen.`);
     } catch {
       setSaveError("Uložení se nepovedlo. Zkuste to prosím znovu.");
+      showToast("Uložení se nepovedlo.", "error");
     } finally {
       setSaving(false);
     }
@@ -854,12 +960,14 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
       const newClient = await insertClient({
         ...patchFromForm(form),
         since: today,
-        notes: [{ date: today, author: "Adam", text: "Klient ručně přidán do CRM." }],
+        notes: [{ date: today, author: currentUserName, text: "Klient ručně přidán do CRM." }],
       });
       setSelectedClientId(newClient.id);
       setCreating(false);
+      showToast(`${form.company} přidán do CRM.`);
     } catch {
       setSaveError("Přidání se nepovedlo. Zkuste to prosím znovu.");
+      showToast("Přidání klienta se nepovedlo.", "error");
     } finally {
       setSaving(false);
     }
@@ -867,9 +975,13 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
 
   const toggleStatus = () => {
     if (!client) return;
-    updateClient(client.id, { status: client.status === "aktivni" ? "pozastaveno" : "aktivni" }).catch(() =>
-      setSaveError("Změna stavu se nepovedla. Zkuste to prosím znovu.")
-    );
+    const nextStatus = client.status === "aktivni" ? "pozastaveno" : "aktivni";
+    updateClient(client.id, { status: nextStatus })
+      .then(() => showToast(`${client.company}: stav změněn na „${STATUS_META[nextStatus].label}“.`))
+      .catch(() => {
+        setSaveError("Změna stavu se nepovedla. Zkuste to prosím znovu.");
+        showToast("Změna stavu se nepovedla.", "error");
+      });
   };
 
   const handleDelete = async () => {
@@ -880,8 +992,10 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
       const remaining = clients.filter((c) => c.id !== client.id);
       setSelectedClientId(remaining.length ? remaining[0].id : null);
       setEditing(false);
+      showToast(`${client.company} smazán.`);
     } catch {
       setSaveError("Smazání se nepovedlo. Zkuste to prosím znovu.");
+      showToast("Smazání se nepovedlo.", "error");
     }
   };
 
@@ -911,20 +1025,65 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
       <div className="px-6 lg:px-10 pt-6 lg:pt-10 pb-4 shrink-0 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="font-display text-2xl lg:text-3xl font-semibold text-white">Klienti</h1>
-          <p className="text-zinc-500 text-sm mt-1">{clients.length} firem v systému</p>
+          <p className="text-zinc-500 text-sm mt-1">
+            {filteredClients.length === clients.length
+              ? `${clients.length} firem v systému`
+              : `${filteredClients.length} z ${clients.length} firem`}
+          </p>
         </div>
-        <button
-          onClick={() => { setCreating(true); setEditing(false); }}
-          className="inline-flex items-center gap-2 rounded-full bg-violet-600 hover:bg-violet-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors shadow-lg shadow-violet-900/40"
-        >
-          <Plus className="w-4 h-4" />
-          Nový klient
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportCsv}
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 hover:border-violet-500/40 hover:bg-white/5 px-4 py-2.5 text-sm font-medium text-zinc-300 hover:text-white transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Export CSV</span>
+          </button>
+          <button
+            onClick={() => { setCreating(true); setEditing(false); }}
+            className="inline-flex items-center gap-2 rounded-full bg-violet-600 hover:bg-violet-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors shadow-lg shadow-violet-900/40"
+          >
+            <Plus className="w-4 h-4" />
+            Nový klient
+          </button>
+        </div>
+      </div>
+
+      <div className="px-6 lg:px-10 pb-4 shrink-0 flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Hledat podle firmy, kontaktu, oboru…"
+            className="w-full rounded-xl border border-white/10 bg-zinc-900/60 pl-10 pr-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500 transition-colors"
+          />
+        </div>
+        <div className="flex items-center gap-1.5">
+          {[
+            { id: "all", label: "Vše" },
+            { id: "aktivni", label: "Aktivní" },
+            { id: "novy_lead", label: "Leady" },
+            { id: "pozastaveno", label: "Pozastaveno" },
+          ].map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setStatusFilter(f.id)}
+              className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors border ${
+                statusFilter === f.id
+                  ? "bg-violet-500/15 border-violet-500/40 text-violet-300"
+                  : "border-white/10 text-zinc-500 hover:text-white hover:border-white/25"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex-1 grid lg:grid-cols-5 gap-0 lg:gap-6 px-6 lg:px-10 pb-6 lg:pb-10 min-h-0">
         <div className="lg:col-span-2 overflow-y-auto rounded-2xl border border-white/10 bg-white/5 divide-y divide-white/5">
-          {clients.map((c) => {
+          {filteredClients.map((c) => {
             const active = client && c.id === client.id;
             const cPkg = packageById(c.packageId) || packageById(c.potentialPackageId);
             return (
@@ -944,7 +1103,11 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
               </button>
             );
           })}
-          {clients.length === 0 && <div className="px-5 py-8 text-center text-sm text-zinc-500">Žádní klienti. Přidejte prvního.</div>}
+          {filteredClients.length === 0 && (
+            <div className="px-5 py-8 text-center text-sm text-zinc-500">
+              {clients.length === 0 ? "Žádní klienti. Přidejte prvního." : "Žádný klient neodpovídá hledání."}
+            </div>
+          )}
         </div>
 
         <div className="lg:col-span-3 overflow-y-auto mt-4 lg:mt-0">
@@ -1155,7 +1318,7 @@ function PresentationView({ presentMode, setPresentMode }) {
 
 /* ============================== KALKULACE ============================== */
 
-function CalculatorView({ prefillClientId, codes, clients, insertClient, updateClient }) {
+function CalculatorView({ prefillClientId, codes, clients, insertClient, updateClient, currentUserName }) {
   const prefillClient = clients.find((c) => c.id === prefillClientId) || null;
 
   const [clientId, setClientId] = useState(prefillClient ? String(prefillClient.id) : "");
@@ -1277,7 +1440,7 @@ function CalculatorView({ prefillClientId, codes, clients, insertClient, updateC
         packageId: packageId,
         potentialPackageId: null,
         commitmentId: commitmentId,
-        notes: [{ date: today, author: "Adam", text: noteText }, ...(existing?.notes || [])],
+        notes: [{ date: today, author: currentUserName, text: noteText }, ...(existing?.notes || [])],
       });
     } else {
       const newClient = await insertClient({
@@ -1294,7 +1457,7 @@ function CalculatorView({ prefillClientId, codes, clients, insertClient, updateC
         ico: orderForm.ico,
         dic: orderForm.dic,
         since: today,
-        notes: [{ date: today, author: "Adam", text: noteText }],
+        notes: [{ date: today, author: currentUserName, text: noteText }],
       });
       setClientId(String(newClient.id));
     }
@@ -1654,6 +1817,7 @@ function CalculatorView({ prefillClientId, codes, clients, insertClient, updateC
 /* ============================== SLEVOVÉ KÓDY ============================== */
 
 function CodesView({ codes, insertCode, updateCode, removeCode }) {
+  const { showToast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ code: "", type: "percent", value: "", description: "" });
   const [formError, setFormError] = useState("");
@@ -1680,8 +1844,10 @@ function CodesView({ codes, insertCode, updateCode, removeCode }) {
         active: true,
       });
       resetForm();
+      showToast(`Kód ${codeTrimmed} vytvořen.`);
     } catch {
       setFormError("Vytvoření kódu se nepovedlo. Zkuste to prosím znovu.");
+      showToast("Vytvoření kódu se nepovedlo.", "error");
     }
   };
 
@@ -1689,19 +1855,22 @@ function CodesView({ codes, insertCode, updateCode, removeCode }) {
     setBusyId(c.id);
     try {
       await updateCode(c.id, { active: !c.active });
+      showToast(`${c.code}: ${c.active ? "deaktivován" : "aktivován"}.`);
     } catch {
-      // tichý neúspěch je v pořádku — realtime refetch stejně obnoví skutečný stav
+      showToast("Změna se nepovedla.", "error");
     } finally {
       setBusyId(null);
     }
   };
 
   const handleRemoveCode = async (id) => {
+    const code = codes.find((c) => c.id === id);
     setBusyId(id);
     try {
       await removeCode(id);
+      showToast(`${code?.code || "Kód"} smazán.`);
     } catch {
-      // stejné jako výše
+      showToast("Smazání se nepovedlo.", "error");
     } finally {
       setBusyId(null);
     }
@@ -1785,11 +1954,6 @@ function CodesView({ codes, insertCode, updateCode, removeCode }) {
           {codes.length === 0 && <div className="px-5 py-8 text-center text-sm text-zinc-500">Zatím žádné slevové kódy.</div>}
         </div>
       </GlassCard>
-
-      <p className="text-xs text-zinc-600 mt-4">
-        Kódy se ukládají do sdílené databáze — jakmile tu nějaký vytvoříte nebo deaktivujete, uvidí to i druhá
-        přihlášená osoba (obvykle do pár vteřin).
-      </p>
     </div>
   );
 }
@@ -1798,6 +1962,7 @@ function CodesView({ codes, insertCode, updateCode, removeCode }) {
 
 export default function AdminApp() {
   const { session, signOut } = useAuth();
+  const currentUserName = displayNameFromEmail(session?.user?.email);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedClientId, setSelectedClientId] = useState(null);
   const [calcPrefillId, setCalcPrefillId] = useState(null);
@@ -1811,6 +1976,15 @@ export default function AdminApp() {
     setCalcPrefillId(clientId);
     setActiveTab("kalkulace");
   };
+
+  const goToClient = (clientId) => {
+    setSelectedClientId(clientId);
+    setActiveTab("klienti");
+  };
+
+  if (tasksTable.loading || clientsTable.loading || codesTable.loading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-body antialiased flex">
@@ -1827,6 +2001,8 @@ export default function AdminApp() {
                 tasks={tasksTable.rows}
                 updateTask={tasksTable.update}
                 setActiveTab={setActiveTab}
+                currentUserName={currentUserName}
+                goToClient={goToClient}
               />
             )}
             {activeTab === "klienti" && (
@@ -1838,6 +2014,7 @@ export default function AdminApp() {
                 selectedClientId={selectedClientId}
                 setSelectedClientId={setSelectedClientId}
                 openCalculatorFor={openCalculatorFor}
+                currentUserName={currentUserName}
               />
             )}
             {activeTab === "prezentace" && <PresentationView presentMode={presentMode} setPresentMode={setPresentMode} />}
@@ -1848,6 +2025,7 @@ export default function AdminApp() {
                 clients={clientsTable.rows}
                 insertClient={clientsTable.insert}
                 updateClient={clientsTable.update}
+                currentUserName={currentUserName}
               />
             )}
             {activeTab === "kody" && (
