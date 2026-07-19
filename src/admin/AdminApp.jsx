@@ -34,6 +34,9 @@ import {
   Search,
   Download,
   Activity,
+  Globe,
+  User,
+  Radar,
 } from "lucide-react";
 import { useSyncedTable } from "./useSyncedTable.js";
 import { useAuth } from "./AuthContext.js";
@@ -109,12 +112,26 @@ const COMMITMENTS = [
 ];
 
 const CHANNELS = [
-  { id: "google_ads", label: "Google Ads" },
+  { id: "google_ads", label: "Google Ads — vyhledávání" },
+  { id: "google_display", label: "Google Ads — Display síť" },
   { id: "google_profile", label: "Google profil firmy / SEO" },
+  { id: "sklik", label: "Sklik (Seznam.cz)" },
   { id: "meta", label: "Meta — Facebook & Instagram" },
   { id: "youtube", label: "YouTube" },
   { id: "linkedin", label: "LinkedIn" },
   { id: "tiktok", label: "TikTok" },
+];
+
+const TEAM_OWNERS = ["Erik", "Adam", "Mako"];
+
+const LEAD_SOURCES = [
+  "Doporučení",
+  "Web / poptávkový formulář",
+  "Google vyhledávání",
+  "Sociální sítě",
+  "Veletrh / akce",
+  "Studený kontakt",
+  "Jiné",
 ];
 
 const STATUS_META = {
@@ -299,7 +316,7 @@ function packageById(id) {
 }
 
 function emptyOrderForm() {
-  return { company: "", contact: "", ico: "", dic: "", address: "", email: "", phone: "", channels: [] };
+  return { company: "", contact: "", ico: "", dic: "", address: "", email: "", phone: "", channels: [], customChannel: "" };
 }
 
 function formatDateCz(date) {
@@ -600,7 +617,7 @@ function Sidebar({ activeTab, setActiveTab, userEmail, onSignOut }) {
           <span className="font-display text-sm font-bold text-white">P</span>
         </span>
         <div className="hidden lg:block leading-tight">
-          <div className="font-display text-sm font-semibold text-white">Progma OS</div>
+          <div className="font-display text-sm font-semibold text-white">Progma Admin</div>
           <div className="font-jb text-xs uppercase tracking-wider text-zinc-500">Sales &amp; CRM</div>
         </div>
       </div>
@@ -645,8 +662,13 @@ function Sidebar({ activeTab, setActiveTab, userEmail, onSignOut }) {
 
 /* ============================== DASHBOARD ============================== */
 
-function Dashboard({ clients, tasks, updateTask, setActiveTab, currentUserName, goToClient }) {
+function Dashboard({ clients, tasks, insertTask, updateTask, removeTask, setActiveTab, currentUserName, goToClient }) {
+  const { showToast } = useToast();
   const today = new Date().toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+  const [addingTask, setAddingTask] = useState(false);
+  const [taskForm, setTaskForm] = useState({ text: "", assignee: "", due: "", clientId: "" });
+  const [taskSaving, setTaskSaving] = useState(false);
 
   const activeClients = clients.filter((c) => c.status === "aktivni");
   const leadClients = clients.filter((c) => c.status === "novy_lead");
@@ -677,6 +699,36 @@ function Dashboard({ clients, tasks, updateTask, setActiveTab, currentUserName, 
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
     updateTask(id, { done: !task.done }).catch(() => {});
+  };
+
+  const handleAddTask = async () => {
+    if (!taskForm.text.trim()) return;
+    setTaskSaving(true);
+    try {
+      await insertTask({
+        text: taskForm.text.trim(),
+        assignee: taskForm.assignee || currentUserName,
+        due: taskForm.due.trim() || "Bez termínu",
+        done: false,
+        clientId: taskForm.clientId ? Number(taskForm.clientId) : null,
+      });
+      setTaskForm({ text: "", assignee: "", due: "", clientId: "" });
+      setAddingTask(false);
+      showToast("Úkol přidán.");
+    } catch {
+      showToast("Přidání úkolu se nepovedlo.", "error");
+    } finally {
+      setTaskSaving(false);
+    }
+  };
+
+  const handleRemoveTask = async (id) => {
+    try {
+      await removeTask(id);
+      showToast("Úkol smazán.");
+    } catch {
+      showToast("Smazání se nepovedlo.", "error");
+    }
   };
 
   const kpis = [
@@ -710,27 +762,102 @@ function Dashboard({ clients, tasks, updateTask, setActiveTab, currentUserName, 
         <GlassCard className="lg:col-span-3 p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-display text-lg font-semibold text-white">Úkoly</h2>
-            <span className="font-jb text-xs text-zinc-500">{openTasks} otevřených</span>
+            <div className="flex items-center gap-3">
+              <span className="font-jb text-xs text-zinc-500">{openTasks} otevřených</span>
+              {!addingTask && (
+                <button
+                  onClick={() => setAddingTask(true)}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-violet-300 hover:text-violet-200 transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Nový úkol
+                </button>
+              )}
+            </div>
           </div>
+
+          {addingTask && (
+            <div className="mb-3 rounded-xl border border-violet-500/30 bg-violet-500/5 p-4 space-y-3">
+              <input
+                autoFocus
+                value={taskForm.text}
+                onChange={(e) => setTaskForm({ ...taskForm, text: e.target.value })}
+                placeholder="Co je potřeba udělat…"
+                className={inputClass}
+              />
+              <div className="grid sm:grid-cols-3 gap-3">
+                <select value={taskForm.assignee} onChange={(e) => setTaskForm({ ...taskForm, assignee: e.target.value })} className={inputClass}>
+                  <option value="">Přiřadit komu…</option>
+                  {TEAM_OWNERS.map((o) => (
+                    <option key={o} value={o}>{o}</option>
+                  ))}
+                </select>
+                <input
+                  value={taskForm.due}
+                  onChange={(e) => setTaskForm({ ...taskForm, due: e.target.value })}
+                  placeholder="Termín (např. Zítra)"
+                  className={inputClass}
+                />
+                <select value={taskForm.clientId} onChange={(e) => setTaskForm({ ...taskForm, clientId: e.target.value })} className={inputClass}>
+                  <option value="">Bez klienta</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>{c.company}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleAddTask}
+                  disabled={taskSaving || !taskForm.text.trim()}
+                  className="inline-flex items-center gap-2 rounded-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 px-4 py-2 text-xs font-semibold text-white transition-colors"
+                >
+                  {taskSaving ? "Ukládám…" : "Přidat úkol"}
+                </button>
+                <button
+                  onClick={() => { setAddingTask(false); setTaskForm({ text: "", assignee: "", due: "", clientId: "" }); }}
+                  className="text-xs text-zinc-500 hover:text-white transition-colors"
+                >
+                  Zrušit
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-1">
-            {tasks.map((task) => (
-              <button
-                key={task.id}
-                onClick={() => toggleTask(task.id)}
-                className="w-full flex items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-white/5 transition-colors"
-              >
-                {task.done ? (
-                  <CheckCircle2 className="w-5 h-5 text-violet-400 shrink-0" />
-                ) : (
-                  <Circle className="w-5 h-5 text-zinc-600 shrink-0" />
-                )}
-                <span className={`text-sm flex-1 ${task.done ? "text-zinc-600 line-through" : "text-zinc-200"}`}>
-                  {task.text}
-                </span>
-                <span className="text-xs text-zinc-600 font-jb hidden sm:inline">{task.assignee}</span>
-                <span className="text-xs text-zinc-600 shrink-0 w-16 text-right hidden sm:inline">{task.due}</span>
-              </button>
-            ))}
+            {tasks.map((task) => {
+              const linkedClient = task.clientId ? clients.find((c) => c.id === task.clientId) : null;
+              return (
+                <div key={task.id} className="w-full flex items-center gap-3 rounded-xl px-3 py-3 hover:bg-white/5 transition-colors group">
+                  <button onClick={() => toggleTask(task.id)} className="shrink-0">
+                    {task.done ? (
+                      <CheckCircle2 className="w-5 h-5 text-violet-400" />
+                    ) : (
+                      <Circle className="w-5 h-5 text-zinc-600" />
+                    )}
+                  </button>
+                  <button onClick={() => toggleTask(task.id)} className="flex-1 min-w-0 text-left">
+                    <span className={`text-sm ${task.done ? "text-zinc-600 line-through" : "text-zinc-200"}`}>{task.text}</span>
+                  </button>
+                  {linkedClient && (
+                    <button
+                      onClick={() => goToClient(linkedClient.id)}
+                      className="text-xs text-violet-300 hover:text-violet-200 font-jb hidden sm:inline shrink-0 max-w-[120px] truncate"
+                    >
+                      {linkedClient.company}
+                    </button>
+                  )}
+                  <span className="text-xs text-zinc-600 font-jb hidden sm:inline shrink-0">{task.assignee}</span>
+                  <span className="text-xs text-zinc-600 shrink-0 w-16 text-right hidden sm:inline">{task.due}</span>
+                  <button
+                    onClick={() => handleRemoveTask(task.id)}
+                    className="shrink-0 opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-rose-400 transition-all"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+            {tasks.length === 0 && <p className="text-sm text-zinc-600 px-3 py-3">Zatím žádné úkoly.</p>}
           </div>
         </GlassCard>
 
@@ -804,6 +931,13 @@ function ClientEditForm({ initial, onSave, onCancel, saveLabel = "Uložit", savi
 
   const set = (field) => (e) => setForm({ ...form, [field]: e.target.value });
 
+  const toggleChannel = (id) => {
+    setForm((f) => ({
+      ...f,
+      channels: f.channels.includes(id) ? f.channels.filter((c) => c !== id) : [...f.channels, id],
+    }));
+  };
+
   const handleSave = () => {
     if (!form.company.trim()) { setError("Vyplňte název firmy."); return; }
     if (!form.contact.trim()) { setError("Vyplňte kontaktní osobu."); return; }
@@ -825,11 +959,31 @@ function ClientEditForm({ initial, onSave, onCancel, saveLabel = "Uložit", savi
         </Field>
         <Field label="Telefon"><input value={form.phone} onChange={set("phone")} className={`${inputClass} font-jb`} placeholder="+420 777 123 456" /></Field>
         <Field label="E-mail"><input value={form.email} onChange={set("email")} className={inputClass} placeholder="jan@firma.cz" /></Field>
+        <Field label="Web"><input value={form.website} onChange={set("website")} className={inputClass} placeholder="www.firma.cz" /></Field>
+        <Field label="Zodpovědná osoba">
+          <select value={form.owner} onChange={set("owner")} className={inputClass}>
+            <option value="">— Nepřiřazeno —</option>
+            {TEAM_OWNERS.map((o) => (
+              <option key={o} value={o}>{o}</option>
+            ))}
+          </select>
+        </Field>
         <div className="sm:col-span-2">
           <Field label="Adresa"><input value={form.address} onChange={set("address")} className={inputClass} placeholder="Ulice 123, 602 00 Brno" /></Field>
         </div>
         <Field label="IČO"><input value={form.ico} onChange={set("ico")} className={`${inputClass} font-jb`} placeholder="12345678" /></Field>
         <Field label="DIČ (pokud je plátce DPH)"><input value={form.dic} onChange={set("dic")} className={`${inputClass} font-jb`} placeholder="CZ12345678" /></Field>
+        <Field label="Zdroj leadu">
+          <select value={form.leadSource} onChange={set("leadSource")} className={inputClass}>
+            <option value="">— Neuvedeno —</option>
+            {LEAD_SOURCES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Štítky (oddělte čárkou)">
+          <input value={form.tags} onChange={set("tags")} className={inputClass} placeholder="VIP, sezónní, follow-up" />
+        </Field>
         <Field label="Balíček">
           <select value={form.packageId} onChange={set("packageId")} className={inputClass}>
             <option value="">— Bez balíčku —</option>
@@ -846,6 +1000,31 @@ function ClientEditForm({ initial, onSave, onCancel, saveLabel = "Uložit", savi
           </select>
         </Field>
       </div>
+
+      <div>
+        <label className="block text-xs font-jb uppercase tracking-wide text-zinc-500 mb-3">Aktivní kanály</label>
+        <div className="grid sm:grid-cols-2 gap-2.5">
+          {CHANNELS.map((ch) => {
+            const checked = form.channels.includes(ch.id);
+            return (
+              <button
+                key={ch.id}
+                type="button"
+                onClick={() => toggleChannel(ch.id)}
+                className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-left transition-colors ${
+                  checked ? "border-violet-500 bg-violet-500/10 text-white" : "border-white/10 bg-white/5 text-zinc-400 hover:border-white/25"
+                }`}
+              >
+                <span className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 ${checked ? "bg-violet-500 border-violet-500" : "border-white/20"}`}>
+                  {checked && <Check className="w-3 h-3 text-white" />}
+                </span>
+                <span className="text-sm">{ch.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {error && <p className="text-xs text-rose-400">{error}</p>}
       {serverError && <p className="text-xs text-rose-400">{serverError}</p>}
       <div className="flex items-center gap-3 pt-2">
@@ -863,13 +1042,16 @@ function ClientEditForm({ initial, onSave, onCancel, saveLabel = "Uložit", savi
   );
 }
 
-function ClientsView({ clients, insertClient, updateClient, removeClient, selectedClientId, setSelectedClientId, openCalculatorFor, currentUserName }) {
+function ClientsView({ clients, insertClient, updateClient, removeClient, selectedClientId, setSelectedClientId, openCalculatorFor, currentUserName, tasks, insertTask, updateTask, removeTask }) {
   const { showToast } = useToast();
   const [editing, setEditing] = useState(false);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [search, setSearch] = useState("");
+  const [addingNote, setAddingNote] = useState(false);
+  const [noteText, setNoteText] = useState("");
+  const [noteSaving, setNoteSaving] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
 
   const client = clients.find((c) => c.id === selectedClientId) || clients[0] || null;
@@ -920,6 +1102,10 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
     setEditing(false);
     setCreating(false);
     setSaveError("");
+    setAddingNote(false);
+    setNoteText("");
+    setAddingTask(false);
+    setTaskText("");
   };
 
   const patchFromForm = (form) => ({
@@ -932,6 +1118,11 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
     address: form.address,
     ico: form.ico,
     dic: form.dic,
+    website: form.website,
+    owner: form.owner,
+    leadSource: form.leadSource,
+    tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
+    channels: form.channels,
     commitmentId: form.commitmentId,
     packageId: form.status === "novy_lead" ? null : form.packageId || null,
     potentialPackageId: form.status === "novy_lead" ? form.packageId || null : null,
@@ -984,6 +1175,60 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
       });
   };
 
+  const handleAddNote = async () => {
+    if (!client || !noteText.trim()) return;
+    setNoteSaving(true);
+    try {
+      const today = formatDateCz(new Date());
+      await updateClient(client.id, {
+        notes: [{ date: today, author: currentUserName, text: noteText.trim() }, ...client.notes],
+      });
+      setNoteText("");
+      setAddingNote(false);
+      showToast("Poznámka přidána.");
+    } catch {
+      showToast("Poznámku se nepovedlo uložit.", "error");
+    } finally {
+      setNoteSaving(false);
+    }
+  };
+
+  const [addingTask, setAddingTask] = useState(false);
+  const [taskText, setTaskText] = useState("");
+  const [taskSaving, setTaskSaving] = useState(false);
+  const clientTasks = client ? tasks.filter((t) => t.clientId === client.id) : [];
+
+  const handleAddClientTask = async () => {
+    if (!client || !taskText.trim()) return;
+    setTaskSaving(true);
+    try {
+      await insertTask({
+        text: taskText.trim(),
+        assignee: currentUserName,
+        due: "Bez termínu",
+        done: false,
+        clientId: client.id,
+      });
+      setTaskText("");
+      setAddingTask(false);
+      showToast("Úkol přidán.");
+    } catch {
+      showToast("Přidání úkolu se nepovedlo.", "error");
+    } finally {
+      setTaskSaving(false);
+    }
+  };
+
+  const toggleClientTask = (task) => {
+    updateTask(task.id, { done: !task.done }).catch(() => showToast("Změna se nepovedla.", "error"));
+  };
+
+  const removeClientTask = (id) => {
+    removeTask(id)
+      .then(() => showToast("Úkol smazán."))
+      .catch(() => showToast("Smazání se nepovedlo.", "error"));
+  };
+
   const handleDelete = async () => {
     if (!client) return;
     if (!window.confirm(`Opravdu smazat klienta ${client.company}? Tuto akci nelze vrátit zpět.`)) return;
@@ -999,7 +1244,7 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
     }
   };
 
-  const createInitial = { company: "", contact: "", industry: "", status: "novy_lead", phone: "", email: "", address: "", ico: "", dic: "", commitmentId: "none", packageId: "" };
+  const createInitial = { company: "", contact: "", industry: "", status: "novy_lead", phone: "", email: "", address: "", ico: "", dic: "", website: "", owner: "", leadSource: "", tags: "", channels: [], commitmentId: "none", packageId: "" };
   const editInitial = client
     ? {
         company: client.company,
@@ -1011,6 +1256,11 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
         address: client.address,
         ico: client.ico,
         dic: client.dic,
+        website: client.website || "",
+        owner: client.owner || "",
+        leadSource: client.leadSource || "",
+        tags: (client.tags || []).join(", "),
+        channels: client.channels || [],
         commitmentId: client.commitmentId,
         packageId: client.packageId || client.potentialPackageId || "",
       }
@@ -1193,10 +1443,92 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
                       {client.dic ? ` · DIČ ${client.dic}` : ""}
                     </span>
                   </div>
+                  {client.website ? (
+                    <a
+                      href={client.website.startsWith("http") ? client.website : `https://${client.website}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-3 rounded-xl border border-white/10 hover:border-violet-500/40 px-4 py-3 transition-colors"
+                    >
+                      <Globe className="w-4 h-4 text-violet-400 shrink-0" />
+                      <span className="text-sm text-zinc-300 truncate">{client.website}</span>
+                    </a>
+                  ) : (
+                    <div className="flex items-center gap-3 rounded-xl border border-white/10 px-4 py-3">
+                      <Globe className="w-4 h-4 text-violet-400 shrink-0" />
+                      <span className="text-sm text-zinc-300">Web neuveden</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3 rounded-xl border border-white/10 px-4 py-3">
+                    <User className="w-4 h-4 text-violet-400 shrink-0" />
+                    <span className="text-sm text-zinc-300">{client.owner ? `Má na starosti ${client.owner}` : "Nepřiřazeno"}</span>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-xl border border-white/10 px-4 py-3">
+                    <Radar className="w-4 h-4 text-violet-400 shrink-0" />
+                    <span className="text-sm text-zinc-300">{client.leadSource || "Zdroj leadu neuveden"}</span>
+                  </div>
                 </div>
 
+                {((client.tags && client.tags.length > 0) || (client.channels && client.channels.length > 0)) && (
+                  <div className="flex flex-wrap items-center gap-2 mb-6">
+                    {(client.tags || []).map((tag, i) => (
+                      <span key={`tag-${i}`} className="rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs text-violet-300">
+                        {tag}
+                      </span>
+                    ))}
+                    {(client.channels || []).map((chId, i) => {
+                      const ch = CHANNELS.find((c) => c.id === chId);
+                      return ch ? (
+                        <span key={`ch-${i}`} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-zinc-400">
+                          {ch.label}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                )}
+
                 <div className="mb-6">
-                  <h3 className="text-xs font-jb uppercase tracking-wide text-zinc-500 mb-3">Poznámky ze schůzek</h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs font-jb uppercase tracking-wide text-zinc-500">Poznámky ze schůzek</h3>
+                    {!addingNote && (
+                      <button
+                        onClick={() => setAddingNote(true)}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-violet-300 hover:text-violet-200 transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Přidat poznámku
+                      </button>
+                    )}
+                  </div>
+
+                  {addingNote && (
+                    <div className="mb-3 rounded-xl border border-violet-500/30 bg-violet-500/5 p-4">
+                      <textarea
+                        autoFocus
+                        rows={3}
+                        value={noteText}
+                        onChange={(e) => setNoteText(e.target.value)}
+                        placeholder="Co se řešilo, na čem jste se domluvili…"
+                        className={`${inputClass} resize-none mb-3`}
+                      />
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={handleAddNote}
+                          disabled={noteSaving || !noteText.trim()}
+                          className="inline-flex items-center gap-2 rounded-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 px-4 py-2 text-xs font-semibold text-white transition-colors"
+                        >
+                          {noteSaving ? "Ukládám…" : "Uložit poznámku"}
+                        </button>
+                        <button
+                          onClick={() => { setAddingNote(false); setNoteText(""); }}
+                          className="text-xs text-zinc-500 hover:text-white transition-colors"
+                        >
+                          Zrušit
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-3">
                     {client.notes.map((note, i) => (
                       <div key={i} className="flex gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
@@ -1210,6 +1542,71 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
                       </div>
                     ))}
                     {client.notes.length === 0 && <p className="text-sm text-zinc-600">Zatím žádné poznámky.</p>}
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs font-jb uppercase tracking-wide text-zinc-500">Úkoly k tomuto klientovi</h3>
+                    {!addingTask && (
+                      <button
+                        onClick={() => setAddingTask(true)}
+                        className="inline-flex items-center gap-1.5 text-xs font-medium text-violet-300 hover:text-violet-200 transition-colors"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Přidat úkol
+                      </button>
+                    )}
+                  </div>
+
+                  {addingTask && (
+                    <div className="mb-3 rounded-xl border border-violet-500/30 bg-violet-500/5 p-4">
+                      <input
+                        autoFocus
+                        value={taskText}
+                        onChange={(e) => setTaskText(e.target.value)}
+                        placeholder="Co je potřeba udělat…"
+                        className={`${inputClass} mb-3`}
+                      />
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={handleAddClientTask}
+                          disabled={taskSaving || !taskText.trim()}
+                          className="inline-flex items-center gap-2 rounded-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 px-4 py-2 text-xs font-semibold text-white transition-colors"
+                        >
+                          {taskSaving ? "Ukládám…" : "Uložit úkol"}
+                        </button>
+                        <button
+                          onClick={() => { setAddingTask(false); setTaskText(""); }}
+                          className="text-xs text-zinc-500 hover:text-white transition-colors"
+                        >
+                          Zrušit
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-1">
+                    {clientTasks.map((task) => (
+                      <div key={task.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 group">
+                        <button onClick={() => toggleClientTask(task)} className="shrink-0">
+                          {task.done ? (
+                            <CheckCircle2 className="w-4 h-4 text-violet-400" />
+                          ) : (
+                            <Circle className="w-4 h-4 text-zinc-600" />
+                          )}
+                        </button>
+                        <span className={`text-sm flex-1 ${task.done ? "text-zinc-600 line-through" : "text-zinc-300"}`}>{task.text}</span>
+                        <span className="text-xs text-zinc-600 font-jb shrink-0">{task.assignee}</span>
+                        <button
+                          onClick={() => removeClientTask(task.id)}
+                          className="shrink-0 opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-rose-400 transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    {clientTasks.length === 0 && !addingTask && <p className="text-sm text-zinc-600">Zatím žádné úkoly k tomuto klientovi.</p>}
                   </div>
                 </div>
 
@@ -1334,7 +1731,8 @@ function CalculatorView({ prefillClientId, codes, clients, insertClient, updateC
           address: prefillClient.address,
           email: prefillClient.email,
           phone: prefillClient.phone,
-          channels: [],
+          channels: prefillClient.channels || [],
+          customChannel: "",
         }
       : emptyOrderForm()
   );
@@ -1362,7 +1760,8 @@ function CalculatorView({ prefillClientId, codes, clients, insertClient, updateC
         address: c.address,
         email: c.email,
         phone: c.phone,
-        channels: [],
+        channels: c.channels || [],
+        customChannel: "",
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1382,6 +1781,11 @@ function CalculatorView({ prefillClientId, codes, clients, insertClient, updateC
   const monthlySavings = basePrice - finalPrice;
   const totalSavings = monthlySavings * commitment.months;
   const hasDiscount = finalPrice < basePrice;
+
+  const channelLabels = [
+    ...CHANNELS.filter((ch) => orderForm.channels.includes(ch.id)).map((ch) => ch.label),
+    ...(orderForm.customChannel.trim() ? [orderForm.customChannel.trim()] : []),
+  ];
 
   const toggleChannel = (id) => {
     setOrderForm((f) => ({
@@ -1414,7 +1818,7 @@ function CalculatorView({ prefillClientId, codes, clients, insertClient, updateC
     if (!orderForm.company.trim()) e.company = "Vyplňte název firmy.";
     if (!orderForm.contact.trim()) e.contact = "Vyplňte kontaktní osobu.";
     if (!orderForm.email.trim() && !orderForm.phone.trim()) e.contactInfo = "Vyplňte alespoň e-mail nebo telefon.";
-    if (orderForm.channels.length === 0) e.channels = "Vyberte alespoň jeden marketingový kanál.";
+    if (orderForm.channels.length === 0 && !orderForm.customChannel.trim()) e.channels = "Vyberte nebo napište alespoň jeden marketingový kanál.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -1424,7 +1828,7 @@ function CalculatorView({ prefillClientId, codes, clients, insertClient, updateC
   // if this order was for someone not yet in the system.
   const syncClientAfterOrder = async () => {
     const today = formatDateCz(new Date());
-    const noteText = `Objednávka vygenerována: ${pkg.name} · ${commitment.label} · ${formatKc(finalPrice)}/měsíc.`;
+    const noteText = `Objednávka vygenerována: ${pkg.name} · ${commitment.label} · ${formatKc(finalPrice)}/měsíc. Kanály: ${channelLabels.join(", ")}.`;
 
     if (clientId) {
       const existing = clients.find((c) => String(c.id) === clientId);
@@ -1440,6 +1844,7 @@ function CalculatorView({ prefillClientId, codes, clients, insertClient, updateC
         packageId: packageId,
         potentialPackageId: null,
         commitmentId: commitmentId,
+        channels: orderForm.channels,
         notes: [{ date: today, author: currentUserName, text: noteText }, ...(existing?.notes || [])],
       });
     } else {
@@ -1456,6 +1861,7 @@ function CalculatorView({ prefillClientId, codes, clients, insertClient, updateC
         address: orderForm.address,
         ico: orderForm.ico,
         dic: orderForm.dic,
+        channels: orderForm.channels,
         since: today,
         notes: [{ date: today, author: currentUserName, text: noteText }],
       });
@@ -1478,7 +1884,7 @@ function CalculatorView({ prefillClientId, codes, clients, insertClient, updateC
         afterCommitment,
         codeDiscountAmount,
         finalPrice,
-        channelLabels: CHANNELS.filter((ch) => orderForm.channels.includes(ch.id)).map((ch) => ch.label),
+        channelLabels,
       });
     } catch {
       setGenerating(false);
@@ -1681,6 +2087,14 @@ function CalculatorView({ prefillClientId, codes, clients, insertClient, updateC
                   </button>
                 );
               })}
+            </div>
+            <div className="mt-3">
+              <input
+                value={orderForm.customChannel}
+                onChange={(e) => setOrderForm({ ...orderForm, customChannel: e.target.value })}
+                placeholder="Jiný kanál, který tu není (nepovinné)"
+                className={inputClass}
+              />
             </div>
             {errors.channels && <p className="text-xs text-rose-400 mt-2">{errors.channels}</p>}
           </GlassCard>
@@ -1999,7 +2413,9 @@ export default function AdminApp() {
               <Dashboard
                 clients={clientsTable.rows}
                 tasks={tasksTable.rows}
+                insertTask={tasksTable.insert}
                 updateTask={tasksTable.update}
+                removeTask={tasksTable.remove}
                 setActiveTab={setActiveTab}
                 currentUserName={currentUserName}
                 goToClient={goToClient}
@@ -2015,6 +2431,10 @@ export default function AdminApp() {
                 setSelectedClientId={setSelectedClientId}
                 openCalculatorFor={openCalculatorFor}
                 currentUserName={currentUserName}
+                tasks={tasksTable.rows}
+                insertTask={tasksTable.insert}
+                updateTask={tasksTable.update}
+                removeTask={tasksTable.remove}
               />
             )}
             {activeTab === "prezentace" && <PresentationView presentMode={presentMode} setPresentMode={setPresentMode} />}

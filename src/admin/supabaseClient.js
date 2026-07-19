@@ -9,7 +9,7 @@ export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
 if (!isSupabaseConfigured) {
   console.warn(
-    "Chybí VITE_SUPABASE_URL nebo VITE_SUPABASE_ANON_KEY — Progma OS se nemůže připojit k databázi."
+    "Chybí VITE_SUPABASE_URL nebo VITE_SUPABASE_ANON_KEY — Progma Admin se nemůže připojit k databázi."
   );
 }
 

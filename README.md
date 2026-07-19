@@ -3,13 +3,13 @@
 Tento repozitář obsahuje **dvě aplikace** postavené na Reactu, Tailwind CSS a Framer Motion, sdílející stejný kód/design systém:
 
 1. **Veřejný web** (`progma.cz`) — landing page pro klienty.
-2. **Progma OS** (`admin.progma.cz`) — interní CRM a prodejní nástroj pro Erika a Adama, se skutečným přihlašováním a sdílenými daty přes [Supabase](https://supabase.com) (nastavení v sekci [Supabase — sdílená data a přihlašování](#supabase--sdílená-data-a-přihlašování)).
+2. **Progma Admin** (`admin.progma.cz`) — interní CRM a prodejní nástroj pro Erika a Adama, se skutečným přihlašováním a sdílenými daty přes [Supabase](https://supabase.com) (nastavení v sekci [Supabase — sdílená data a přihlašování](#supabase--sdílená-data-a-přihlašování)).
 
 Obě se sestavují z jednoho repozitáře, ale nasazují se jako dva samostatné weby na dvou doménách — postup je v sekci [Nasazení dvou webů z jednoho repozitáře](#nasazení-dvou-webů-z-jednoho-repozitáře).
 
 ## Spuštění lokálně
 
-Potřebujete [Node.js](https://nodejs.org/) 18+ a **funkční Supabase projekt** (Progma OS bez něj nejde spustit — veřejný web to nepotřebuje).
+Potřebujete [Node.js](https://nodejs.org/) 18+ a **funkční Supabase projekt** (Progma Admin bez něj nejde spustit — veřejný web to nepotřebuje).
 
 ```bash
 npm install
@@ -17,7 +17,7 @@ npm run dev
 ```
 
 - Veřejný web poběží na `http://localhost:5173`.
-- Progma OS (admin) poběží na `http://localhost:5173/admin.html` — stejný dev server obsluhuje obě appky zároveň, není potřeba nic spouštět zvlášť. Bez nastaveného Supabase (viz níže) appka zobrazí srozumitelnou hlášku místo přihlašovací obrazovky.
+- Progma Admin (admin) poběží na `http://localhost:5173/admin.html` — stejný dev server obsluhuje obě appky zároveň, není potřeba nic spouštět zvlášť. Bez nastaveného Supabase (viz níže) appka zobrazí srozumitelnou hlášku místo přihlašovací obrazovky.
 
 ## Build pro produkci
 
@@ -31,20 +31,20 @@ Vygeneruje statický build **veřejného webu** do složky `dist/`.
 npm run build:admin
 ```
 
-Vygeneruje statický build **Progma OS** do složky `dist-admin/`. Používá vlastní konfigurák (`vite.admin.config.js`) a po sestavení automaticky přejmenuje `admin.html` na `index.html`, aby fungoval jako samostatný web na `admin.progma.cz` (viz níže).
+Vygeneruje statický build **Progma Admin** do složky `dist-admin/`. Používá vlastní konfigurák (`vite.admin.config.js`) a po sestavení automaticky přejmenuje `admin.html` na `index.html`, aby fungoval jako samostatný web na `admin.progma.cz` (viz níže).
 
 ```bash
 npm run preview        # náhled veřejného webu z dist/
-npm run preview:admin  # náhled Progma OS z dist-admin/
+npm run preview:admin  # náhled Progma Admin z dist-admin/
 ```
 
 ## Struktura projektu
 
 ```
 ├── index.html               # HTML shell veřejného webu
-├── admin.html                # HTML shell Progma OS (admin)
+├── admin.html                # HTML shell Progma Admin (admin)
 ├── vite.config.js             # build veřejného webu (npm run build)
-├── vite.admin.config.js       # build Progma OS (npm run build:admin)
+├── vite.admin.config.js       # build Progma Admin (npm run build:admin)
 ├── .env.local.example         # šablona pro Supabase klíče (zkopírovat jako .env.local)
 ├── supabase/
 │   └── schema.sql               # SQL pro založení tabulek a zabezpečení v Supabase
@@ -53,15 +53,15 @@ npm run preview:admin  # náhled Progma OS z dist-admin/
 │   ├── App.jsx                  # celá landing page (hero, ceník, tým, kontakt...)
 │   ├── index.css                 # Tailwind + fonty — sdílené OBĚMA appkami
 │   └── admin/
-│       ├── main.jsx                # vstupní bod Progma OS (obaluje appku přihlašováním)
+│       ├── main.jsx                # vstupní bod Progma Admin (obaluje appku přihlašováním)
 │       ├── AdminAuth.jsx            # přihlašovací obrazovka (Supabase Auth)
 │       ├── AuthContext.js            # sdílí přihlášeného uživatele a odhlášení po appce
 │       ├── supabaseClient.js          # připojení k Supabase
 │       ├── useSyncedTable.js           # hook: tabulka ↔ React state + realtime sync
-│       └── AdminApp.jsx                # celé Progma OS — dashboard, klienti, kalkulace...
+│       └── AdminApp.jsx                # celé Progma Admin — dashboard, klienti, kalkulace...
 ├── public/                    # statické soubory veřejného webu (logo, favicon, showreel, tým...)
 │   └── team/                    # fotky Erika, Adama a Maka
-├── public-admin/               # statické soubory Progma OS (vlastní robots.txt = zákaz indexace)
+├── public-admin/               # statické soubory Progma Admin (vlastní robots.txt = zákaz indexace)
 ├── scripts/
 │   └── rename-admin-entry.js    # pomocný skript pro build:admin
 └── tailwind.config.js          # rozšíření Tailwind palety o fonty a animace — sdílené
@@ -70,7 +70,7 @@ npm run preview:admin  # náhled Progma OS z dist-admin/
 ## Logo a barvy
 
 - **Logo** je uložené jako `public/logo.png` — čisté PNG s průhledným pozadím, takže funguje na jakémkoli podkladu (tmavá navigace, patička). Používá se v `Navbar` a `Footer` v `src/App.jsx` (`<img src="/logo.png" ... />`). Pro výměnu stačí nahradit tento soubor stejným názvem.
-- **Favicon** (`public/favicon.png`, a stejná kopie v `public-admin/favicon.png` pro Progma OS) — vaše skutečná značka, ne generovaná náhrada. Pro výměnu nahraďte oba soubory stejným názvem.
+- **Favicon** (`public/favicon.png`, a stejná kopie v `public-admin/favicon.png` pro Progma Admin) — vaše skutečná značka, ne generovaná náhrada. Pro výměnu nahraďte oba soubory stejným názvem.
 - **Barevná paleta** v `tailwind.config.js` (klíč `theme.extend.colors.violet`) je vyladěná přesně na barvu loga (odstín cca 283° — fialovo-purpurová, ne standardní modro-fialová z výchozí Tailwind palety). Protože je to napojené přes `violet-*` třídy, celý web (tlačítka, zvýraznění, gradienty) se drží stejného odstínu jako logo automaticky — není potřeba nic dohledávat ručně v komponentách. Pokud se logo v budoucnu změní, stačí přepočítat tuto paletu (odstín/sytost) a zbytek webu se přebarví sám.
 
 ## Zveřejnění a viditelnost ve vyhledávání (SEO)
@@ -123,7 +123,9 @@ Organické vyhledávání se buduje týdny až měsíce, ne dny — nejrychlejš
 
 ## Supabase — sdílená data a přihlašování
 
-Progma OS teď má skutečné přihlašování (ne jedno sdílené heslo v kódu) a data, která uvidíte vy i Adam zároveň, ať sedíte kdekoli. Zajišťuje to [Supabase](https://supabase.com) — hostovaná Postgres databáze s vestavěným přihlašováním, kterou appka volá přímo z prohlížeče (žádný vlastní server není potřeba, appka zůstává statická). Bezplatná vrstva na tohle bohatě stačí.
+> Nejste si jistí, jak spolu GitHub, Vercel a Supabase vlastně souvisí a co kam patří? Přehledné vysvětlení celého toku je v [`VERCEL.md`](./VERCEL.md).
+
+Progma Admin teď má skutečné přihlašování (ne jedno sdílené heslo v kódu) a data, která uvidíte vy i Adam zároveň, ať sedíte kdekoli. Zajišťuje to [Supabase](https://supabase.com) — hostovaná Postgres databáze s vestavěným přihlašováním, kterou appka volá přímo z prohlížeče (žádný vlastní server není potřeba, appka zůstává statická). Bezplatná vrstva na tohle bohatě stačí.
 
 ### 1. Založte projekt
 
@@ -136,6 +138,8 @@ Progma OS teď má skutečné přihlašování (ne jedno sdílené heslo v kódu
 1. V levém menu klikněte na **SQL Editor**.
 2. Otevřete soubor `supabase/schema.sql` z tohoto repozitáře, celý obsah zkopírujte a vložte do editoru.
 3. Klikněte **Run**. Vytvoří se 3 tabulky (`clients`, `tasks`, `discount_codes`) se zabezpečením, které povoluje přístup jen přihlášeným uživatelům.
+
+> **Už máte databázi se skutečnými daty a appka vám přibyla o nová pole** (kanály, úkoly navázané na klienta apod.)? `schema.sql` tabulky, které už existují, nepřepíše ani je nedoplní o nové sloupce. Místo něj spusťte `supabase/migration-crm-rozsireni.sql` — bezpečně doplní jen to, co chybí, bez ztráty dat.
 
 ### 3. Získejte API klíče
 
@@ -186,7 +190,7 @@ Nejdřív nahrajte celý repozitář na GitHub:
 ```bash
 git init
 git add .
-git commit -m "Progma web + Progma OS"
+git commit -m "Progma web + Progma Admin"
 git branch -M main
 git remote add origin <URL vašeho repozitáře>
 git push -u origin main
@@ -200,14 +204,14 @@ Teď potřebujete **dva samostatné projekty** u hostingu (např. Vercel), oba n
 2. Nastavení nechte výchozí: Build Command `npm run build`, Output Directory `dist`.
 3. Po nasazení: **Settings → Domains** → přidejte `progma.cz` a `www.progma.cz`.
 
-### 2. Progma OS → `admin.progma.cz`
+### 2. Progma Admin → `admin.progma.cz`
 
 1. Znovu **Add New → Project** a vyberte **ten samý** GitHub repozitář (Vercel dovolí jeden repozitář použít ve více projektech).
 2. V **Build & Development Settings** přepište:
    - Build Command: `npm run build:admin`
    - Output Directory: `dist-admin`
 3. Dejte projektu jiný název (např. `progma-admin`), ať se odliší od prvního.
-4. V **Environment Variables** přidejte `VITE_SUPABASE_URL` a `VITE_SUPABASE_ANON_KEY` (viz sekce [Supabase — sdílená data a přihlašování](#supabase--sdílená-data-a-přihlašování)) — bez nich se Progma OS na produkci nepřipojí k databázi.
+4. V **Environment Variables** přidejte `VITE_SUPABASE_URL` a `VITE_SUPABASE_ANON_KEY` (viz sekce [Supabase — sdílená data a přihlašování](#supabase--sdílená-data-a-přihlašování)) — bez nich se Progma Admin na produkci nepřipojí k databázi.
 5. Po nasazení: **Settings → Domains** → přidejte `admin.progma.cz`.
 
 ### 3. DNS
@@ -222,7 +226,7 @@ Od teď: každý `git push` na `main` automaticky přebuildí a nasadí **oba** 
 
 ## Alternativa: nasazení hlavního webu na GitHub Pages
 
-Pokud chcete `progma.cz` mít přes GitHub Pages místo Vercelu, jde to, ale **jen pro veřejný web** — vysvětlení proč u Progma OS níže.
+Pokud chcete `progma.cz` mít přes GitHub Pages místo Vercelu, jde to, ale **jen pro veřejný web** — vysvětlení proč u Progma Admin níže.
 
 **Co se běžně stane, když v Settings → Pages necháte "Deploy from a branch":** GitHub servíruje soubory z repozitáře přesně tak, jak jsou, bez sestavení. Jenže `index.html` v tomhle projektu odkazuje na nezkompilovaný React/JSX kód (`/src/main.jsx`), který prohlížeč neumí spustit sám o sobě — proto se DNS připojí v pořádku (zelené "DNS check successful"), ale stránka zůstane prázdná. Potřebuje se `npm run build` — přesně to, co jinak dělá Vercel/Netlify automaticky.
 
@@ -243,4 +247,4 @@ Tenhle příkaz udělá `npm run build` a pak sám nahraje **jen obsah `dist/`**
 
 Nepoužívejte možnost A i B zároveň zbytečně — stačí jedna. Actions (možnost A) je pohodlnější, protože nemusíte na nic pamatovat; `npm run deploy` (možnost B) dává větší kontrolu nad tím, kdy přesně se web aktualizuje.
 
-**Proč Progma OS (admin.progma.cz) takhle nejde:** GitHub Pages umí na jeden repozitář napojit jen jednu vlastní doménu. Vercel to obchází tak, že stejný repozitář naimportujete jako dva samostatné projekty (viz výše) — na GitHub Pages by to znamenalo založit **druhý, samostatný repozitář** jen pro Progma OS. Je to řešitelné, ale je to zbytečná práce navíc oproti Vercelu, který tohle zvládá nativně a k tomu ještě férově zvládá proměnné prostředí pro Supabase. Pokud chcete Progma OS opravdu nasadit, doporučuju se u něj držet Vercelu/Netlify i kdyby hlavní web běžel na GitHub Pages — klidně napište, pomůžu založit ten druhý repozitář, kdybyste přesto chtěli zůstat čistě u GitHubu.
+**Proč Progma Admin (admin.progma.cz) takhle nejde:** GitHub Pages umí na jeden repozitář napojit jen jednu vlastní doménu. Vercel to obchází tak, že stejný repozitář naimportujete jako dva samostatné projekty (viz výše) — na GitHub Pages by to znamenalo založit **druhý, samostatný repozitář** jen pro Progma Admin. Je to řešitelné, ale je to zbytečná práce navíc oproti Vercelu, který tohle zvládá nativně a k tomu ještě férově zvládá proměnné prostředí pro Supabase. Pokud chcete Progma Admin opravdu nasadit, doporučuju se u něj držet Vercelu/Netlify i kdyby hlavní web běžel na GitHub Pages — klidně napište, pomůžu založit ten druhý repozitář, kdybyste přesto chtěli zůstat čistě u GitHubu.

@@ -1,4 +1,4 @@
--- Progma OS — nastavení databáze v Supabase
+-- Progma Admin — nastavení databáze v Supabase
 --
 -- Postup:
 -- 1. V Supabase Dashboardu otevřete svůj projekt.
@@ -24,6 +24,11 @@ create table if not exists clients (
   ico text not null default '',
   dic text not null default '',
   since text not null default '',
+  website text not null default '',
+  tags text[] not null default '{}',
+  "leadSource" text not null default '',
+  owner text not null default '',
+  channels text[] not null default '{}',
   notes jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now()
 );
@@ -36,6 +41,7 @@ create table if not exists tasks (
   assignee text not null default '',
   due text not null default '',
   done boolean not null default false,
+  "clientId" bigint references clients(id) on delete set null,
   created_at timestamptz not null default now()
 );
 

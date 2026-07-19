@@ -55,7 +55,7 @@ function LoginForm() {
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-400 to-violet-700 flex items-center justify-center mb-5">
           <span className="font-display text-base font-bold text-white">P</span>
         </div>
-        <h1 className="font-display text-lg font-semibold text-white mb-1">Progma OS</h1>
+        <h1 className="font-display text-lg font-semibold text-white mb-1">Progma Admin</h1>
         <p className="text-sm text-zinc-500 mb-6">Přihlaste se svým firemním účtem.</p>
 
         <input
