@@ -307,15 +307,15 @@ const INITIAL_CODES = [
 // už jsou vyplněné podle smlouvy.
 const SUPPLIER = {
   name: "Erik Eis",
-  address: "Svážná 393/1, Brno 63400",
-  ico: "29754674",
-  dic: "",
+  address: "[DOPLŇTE — sídlo Erika]",
+  ico: "[DOPLŇTE IČO Erika]",
+  dic: "[DOPLŇTE DIČ, pokud je Erik plátcem DPH]",
   email: "info@progma.cz",
   phone: "+420 722 269 263",
-  registry: "Živnostenský úřad Třebíč",
-  bank: "3686215017/3030",
+  registry: "[DOPLŇTE — živnostenský úřad, kde je registrace vedena]",
+  bank: "[DOPLŇTE bankovní spojení]",
   vatPayer: false,
-  invoiceDay: "15",
+  invoiceDay: "[DEN]",
   noticePeriodMonths: 2,
   coProvider: {
     name: "Adam Kryštof",
@@ -1668,7 +1668,8 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
     try {
       await generateCooperationConfirmationPdf(client);
       showToast("Potvrzení o spolupráci staženo.");
-    } catch {
+    } catch (err) {
+      console.error("Generování potvrzení selhalo:", err);
       showToast("Vygenerování potvrzení se nepovedlo.", "error");
     } finally {
       setConfirmationGenerating(false);
@@ -1682,7 +1683,8 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
     try {
       await generateContractPdf(client);
       showToast("Smlouva vygenerována — zkontrolujte pole [DOPLŇTE] před odesláním.");
-    } catch {
+    } catch (err) {
+      console.error("Generování smlouvy selhalo:", err);
       showToast("Vygenerování smlouvy se nepovedlo.", "error");
     } finally {
       setContractGenerating(false);
