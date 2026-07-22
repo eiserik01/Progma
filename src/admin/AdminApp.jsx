@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -138,6 +138,7 @@ const STATUS_META = {
   aktivni: { label: "Aktivní", color: "#34d399" },
   novy_lead: { label: "Nový lead", color: "#c084fc" },
   pozastaveno: { label: "Pozastaveno", color: "#fb7185" },
+  ztraceny: { label: "Ztracený lead", color: "#71717a" },
 };
 
 const INITIAL_CLIENTS = [
@@ -277,16 +278,17 @@ const INITIAL_TASKS = [
 ];
 
 const SLIDES = [
-  "Úvod a agenda schůzky",
-  "O agentuře Progma",
-  "Váš aktuální stav na trhu",
-  "Náš proces spolupráce",
-  "Případové studie",
-  "Balíčky a ceny",
-  "Proč zvolit Progma",
-  "Reference klientů",
-  "Další kroky",
-  "Prostor pro otázky",
+  { title: "Marketing, který pracuje, i když vy zrovna ne", image: "/slides/slide-01.jpg" },
+  { title: "Kdo jsme?", image: "/slides/slide-02.jpg" },
+  { title: "Tým Progma", image: "/slides/slide-03.jpg" },
+  { title: "Když si marketing řešíme sami", image: "/slides/slide-04.jpg" },
+  { title: "Jak vám s tím pomůžeme", image: "/slides/slide-05.jpg" },
+  { title: "Hlavní přínosy", image: "/slides/slide-06.jpg" },
+  { title: "Jak vypadá spolupráce?", image: "/slides/slide-07.jpg" },
+  { title: "Jaké máme možnosti?", image: "/slides/slide-08.jpg" },
+  { title: "Balíčky", image: "/slides/slide-09.jpg" },
+  { title: "Kdo nás využije?", image: "/slides/slide-10.jpg" },
+  { title: "Pojďte to vyzkoušet!", image: "/slides/slide-11.jpg" },
 ];
 
 const INITIAL_CODES = [
@@ -296,13 +298,30 @@ const INITIAL_CODES = [
   { id: 4, code: "VELETRH2025", type: "fixed", value: 1000, description: "Akce z veletrhu 2025", active: false },
 ];
 
+// Progma zatím NENÍ s.r.o. — jde o sdružení dvou OSVČ podle § 2716 OZ:
+// Erik (Hlavní poskytovatel — jedná navenek, vystavuje faktury) a Adam
+// (Spolupracující poskytovatel). Tohle vychází přímo z návrhu smlouvy.
+//
+// DŮLEŽITÉ: doplňte prosím Erikovy skutečné údaje níže — bez nich nejsou
+// generované objednávky, potvrzení ani smlouvy právně přesné. Adamovy údaje
+// už jsou vyplněné podle smlouvy.
 const SUPPLIER = {
-  name: "Progma s.r.o.",
-  address: "Cejl 62, 602 00 Brno",
-  ico: "19283746",
-  dic: "CZ19283746",
+  name: "Erik Eis",
+  address: "Svážná 393/1, Brno 63400",
+  ico: "29754674",
+  dic: "",
   email: "info@progma.cz",
   phone: "+420 722 269 263",
+  registry: "Živnostenský úřad Třebíč",
+  bank: "3686215017/3030",
+  vatPayer: false,
+  invoiceDay: "15",
+  noticePeriodMonths: 2,
+  coProvider: {
+    name: "Adam Kryštof",
+    ico: "23391472",
+    address: "Oslavice 199, 594 01",
+  },
 };
 
 /* ============================== HELPERS ============================== */
@@ -341,6 +360,13 @@ function parseCzDate(str) {
   if (!match) return null;
   const [, day, month, year] = match;
   return new Date(Number(year), Number(month) - 1, Number(day));
+}
+
+const CZ_MONTHS_SHORT = ["led", "úno", "bře", "dub", "kvě", "čvn", "čvc", "srp", "zář", "říj", "lis", "pro"];
+function formatMonthLabel(monthStr) {
+  if (!monthStr) return "";
+  const [y, m] = monthStr.split("-");
+  return `${CZ_MONTHS_SHORT[Number(m) - 1] || m} ${y.slice(2)}`;
 }
 
 /* ============================== PDF GENERATION ============================== */
@@ -470,7 +496,7 @@ async function generateOrderPdf({ orderForm, pkg, commitment, appliedCode, baseP
   doc.text("Dodavatel", marginX, y);
   let ySupplier = y + 6;
   setNormal(9.5);
-  [SUPPLIER.name, SUPPLIER.address, `IČO: ${SUPPLIER.ico}`, `DIČ: ${SUPPLIER.dic}`, SUPPLIER.email, SUPPLIER.phone].forEach((t) => {
+  [SUPPLIER.name, SUPPLIER.address, `IČO: ${SUPPLIER.ico}`, ...(SUPPLIER.vatPayer ? [`DIČ: ${SUPPLIER.dic}`] : []), SUPPLIER.email, SUPPLIER.phone].forEach((t) => {
     doc.text(t, marginX, ySupplier);
     ySupplier += 5;
   });
@@ -566,6 +592,322 @@ async function generateOrderPdf({ orderForm, pkg, commitment, appliedCode, baseP
   doc.save(`objednavka-progma-${filenameSafe}.pdf`);
 }
 
+async function generateCooperationConfirmationPdf(client) {
+  const JsPDFCtor = await ensureJsPDF();
+  const doc = new JsPDFCtor({ unit: "mm", format: "a4" });
+
+  doc.addFileToVFS("DejaVuSans.ttf", FONT_REGULAR_B64);
+  doc.addFont("DejaVuSans.ttf", "DejaVuSans", "normal");
+  doc.addFileToVFS("DejaVuSans-Bold.ttf", FONT_BOLD_B64);
+  doc.addFont("DejaVuSans-Bold.ttf", "DejaVuSans", "bold");
+  doc.setFont("DejaVuSans", "normal");
+
+  const marginX = 20;
+  const rightX = 190;
+  let y = 20;
+
+  const setBold = (size) => { doc.setFont("DejaVuSans", "bold"); doc.setFontSize(size); };
+  const setNormal = (size) => { doc.setFont("DejaVuSans", "normal"); doc.setFontSize(size); };
+  const wrapped = (text, x, width, size, gap = size * 0.6 + 3) => {
+    setNormal(size);
+    doc.setTextColor(40, 40, 45);
+    const parts = doc.splitTextToSize(text, width);
+    parts.forEach((p) => { doc.text(p, x, y); y += gap; });
+  };
+
+  try {
+    doc.addImage(LOGO_PNG_B64, "PNG", marginX, y - 4, 38, 9.4);
+  } catch {
+    setBold(14);
+    doc.text("PROGMA", marginX, y + 2);
+  }
+  setBold(15);
+  doc.setTextColor(20, 20, 20);
+  doc.text("POTVRZENÍ O SPOLUPRÁCI", rightX, y, { align: "right" });
+  y += 6;
+  setNormal(9);
+  doc.setTextColor(110, 110, 115);
+  doc.text(`Vystaveno: ${new Date().toLocaleDateString("cs-CZ")}`, rightX, y, { align: "right" });
+  y += 18;
+
+  doc.setDrawColor(220, 220, 225);
+  doc.line(marginX, y, rightX, y);
+  y += 12;
+
+  const pkg = packageById(client.packageId) || packageById(client.potentialPackageId);
+  const sinceText = client.since || "zahájení spolupráce";
+
+  setBold(11);
+  doc.setTextColor(20, 20, 20);
+  doc.text(client.company, marginX, y);
+  y += 10;
+
+  const bodyText =
+    `${SUPPLIER.name} (IČO ${SUPPLIER.ico}) a ${SUPPLIER.coProvider.name} (IČO ${SUPPLIER.coProvider.ico}), společně podnikající ` +
+    `pod obchodní značkou „Progma“, tímto potvrzují, že výše uvedený subjekt${client.ico ? ` (IČO ${client.ico})` : ""} je od ${sinceText} ` +
+    `klientem naší agentury${pkg ? ` v rámci balíčku „${pkg.name}“` : ""}, v rámci kterého zajišťujeme marketingové služby ` +
+    `a správu online prezentace dle aktuální domluvy mezi oběma stranami.`;
+  wrapped(bodyText, marginX, 170, 10.5, 6.2);
+  y += 8;
+
+  wrapped(
+    "Toto potvrzení slouží jako doklad o probíhající spolupráci a lze jej předložit třetím stranám " +
+    "(např. bance, dotačnímu programu, obchodnímu partnerovi) jako důkaz aktivního marketingového zastoupení.",
+    marginX, 170, 9.5, 5.6
+  );
+  y += 16;
+
+  doc.setDrawColor(150, 150, 155);
+  doc.line(marginX, y, marginX + 60, y);
+  doc.line(120, y, 180, y);
+  setNormal(8.5);
+  doc.setTextColor(110, 110, 115);
+  doc.text("Za poskytovatele — Progma", marginX, y + 5);
+  doc.text("Místo, datum", 120, y + 5);
+
+  y += 22;
+  setNormal(8);
+  doc.setTextColor(140, 140, 145);
+  doc.text(`${SUPPLIER.name} · IČO ${SUPPLIER.ico} · ${SUPPLIER.coProvider.name} · IČO ${SUPPLIER.coProvider.ico}`, marginX, y);
+  y += 4.5;
+  doc.text(`${SUPPLIER.email} · ${SUPPLIER.phone}`, marginX, y);
+
+  const filenameSafe = (client.company || "klient").replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
+  doc.save(`potvrzeni-o-spolupraci-${filenameSafe}.pdf`);
+}
+
+// Text smlouvy vychází z vašeho vlastního návrhu (Progma_proces_smlouvaKlient).
+// Dynamická pole (klient, balíček, cena, závazek) se doplní z CRM automaticky;
+// pole, která ještě nejsou rozhodnutá (Erikovo IČO, DPH, atd.), zůstávají jako
+// [DOPLŇTE] — appka je bere z konstanty SUPPLIER výše v souboru.
+async function generateContractPdf(client) {
+  const JsPDFCtor = await ensureJsPDF();
+  const doc = new JsPDFCtor({ unit: "mm", format: "a4" });
+
+  doc.addFileToVFS("DejaVuSans.ttf", FONT_REGULAR_B64);
+  doc.addFont("DejaVuSans.ttf", "DejaVuSans", "normal");
+  doc.addFileToVFS("DejaVuSans-Bold.ttf", FONT_BOLD_B64);
+  doc.addFont("DejaVuSans-Bold.ttf", "DejaVuSans", "bold");
+  doc.setFont("DejaVuSans", "normal");
+
+  const marginX = 20;
+  const rightX = 190;
+  const pageBottom = 280;
+  let y = 20;
+
+  const setBold = (size) => { doc.setFont("DejaVuSans", "bold"); doc.setFontSize(size); };
+  const setNormal = (size) => { doc.setFont("DejaVuSans", "normal"); doc.setFontSize(size); };
+  const ensureSpace = (needed = 6) => {
+    if (y + needed > pageBottom) { doc.addPage(); y = 20; }
+  };
+  const heading = (text, size = 11.5) => {
+    ensureSpace(14);
+    y += 3;
+    setBold(size);
+    doc.setTextColor(90, 30, 150);
+    doc.splitTextToSize(text, 170).forEach((p) => { ensureSpace(); doc.text(p, marginX, y); y += size * 0.6 + 2; });
+    y += 2;
+  };
+  const para = (text, size = 9.3) => {
+    setNormal(size);
+    doc.setTextColor(40, 40, 45);
+    doc.splitTextToSize(text, 170).forEach((p) => { ensureSpace(); doc.text(p, marginX, y); y += size * 0.58 + 2.1; });
+    y += 2.2;
+  };
+  const listItem = (text, size = 9.3) => {
+    setNormal(size);
+    doc.setTextColor(40, 40, 45);
+    doc.splitTextToSize(text, 160).forEach((p) => { ensureSpace(); doc.text(p, marginX + 5, y); y += size * 0.58 + 2; });
+    y += 0.6;
+  };
+  const tableRow = (label, value, bold = false) => {
+    ensureSpace();
+    setNormal(9.3);
+    doc.setTextColor(40, 40, 45);
+    if (bold) setBold(9.3);
+    doc.text(label, marginX + 4, y);
+    doc.text(value, rightX - 4, y, { align: "right" });
+    y += 6;
+  };
+
+  const pkg = packageById(client.packageId) || packageById(client.potentialPackageId);
+  const commitment = COMMITMENTS.find((c) => c.id === client.commitmentId) || COMMITMENTS[0];
+  const basePrice = pkg ? pkg.pricing.none : 0;
+  const discountPrice = pkg ? pkg.pricing[commitment.id] ?? basePrice : 0;
+  const today = new Date().toLocaleDateString("cs-CZ");
+  const vatLine = SUPPLIER.vatPayer ? "je plátcem DPH" : "není plátcem DPH";
+
+  // Header
+  try {
+    doc.addImage(LOGO_PNG_B64, "PNG", marginX, y - 4, 34, 8.4);
+  } catch {
+    setBold(13);
+    doc.text("PROGMA", marginX, y + 2);
+  }
+  setBold(13);
+  doc.setTextColor(20, 20, 20);
+  doc.text("SMLOUVA O POSKYTOVÁNÍ", rightX, y - 2, { align: "right" });
+  doc.text("MARKETINGOVÝCH SLUŽEB", rightX, y + 4, { align: "right" });
+  y += 14;
+  para("uzavřená podle § 1746 odst. 2 zákona č. 89/2012 Sb., občanský zákoník, v platném znění (dále jen „OZ“)", 8);
+  y += 2;
+
+  heading("SMLUVNÍ STRANY");
+  setBold(9.5); doc.setTextColor(20, 20, 20); doc.text("Poskytovatel:", marginX, y); y += 5.5;
+  para(`${SUPPLIER.name}, IČO ${SUPPLIER.ico}, se sídlem ${SUPPLIER.address}, zapsán v živnostenském rejstříku vedeném ${SUPPLIER.registry}, bankovní spojení: ${SUPPLIER.bank} (dále jen „Hlavní poskytovatel“)`);
+  para(`a ${SUPPLIER.coProvider.name}, IČO ${SUPPLIER.coProvider.ico}, se sídlem ${SUPPLIER.coProvider.address} (dále jen „Spolupracující poskytovatel“), společně dále jen „Poskytovatel“ nebo „Progma“.`);
+  y += 1;
+  setBold(9.5); doc.setTextColor(20, 20, 20); doc.text("Klient:", marginX, y); y += 5.5;
+  para(`${client.company}, IČO ${client.ico || "[DOPLŇTE]"}, DIČ [DOPLŇTE], se sídlem ${client.address || "[DOPLŇTE]"}, zastoupen: ${client.contact || "[DOPLŇTE]"} (dále jen „Klient“)`);
+
+  heading("PREAMBULE A PRÁVNÍ POSTAVENÍ POSKYTOVATELE");
+  para("A. Hlavní poskytovatel a Spolupracující poskytovatel jsou samostatnými podnikateli, kteří se za účelem společného poskytování marketingových služeb sdružili do společnosti podle § 2716 a násl. OZ vystupující pod nezapsanou obchodní značkou „Progma“ (dále jen „Společnost“). Společnost nemá právní osobnost; práva a povinnosti z této Smlouvy vznikají přímo oběma Poskytovatelům.");
+  para("B. Poskytovatelé se dohodli, že jednat navenek vůči Klientovi, přijímat plnění, vystavovat faktury a činit veškeré právní úkony podle této Smlouvy je oprávněn Hlavní poskytovatel, a to i s účinky pro Spolupracujícího poskytovatele (§ 2721 OZ). Klient je oprávněn jednat výlučně s Hlavním poskytovatelem a plnit k jeho rukám; takové plnění se považuje za plnění oběma Poskytovatelům.");
+  para("C. Poskytovatelé odpovídají Klientovi za splnění závazků z této Smlouvy společně a nerozdílně (§ 2736 OZ). Vnitřní poměry mezi Poskytovateli (dělba práce, podíl na zisku) se řídí jejich samostatnou dohodou a nemají vliv na práva Klienta.");
+  para(`D. Klient bere na vědomí, že Poskytovatel ${vatLine}.`);
+
+  heading("ČLÁNEK 1 — PŘEDMĚT SMLOUVY");
+  para("1.1 Poskytovatel se zavazuje poskytovat Klientovi marketingové služby v rozsahu zvoleného balíčku dle Přílohy č. 1 (Specifikace plnění) a Klient se zavazuje za tyto služby platit sjednanou odměnu.");
+  para("1.2 Předmětem plnění mohou být zejména:");
+  listItem("a) Správa sociálních sítí — tvorba obsahového plánu, příprava a publikace příspěvků, komunitní management v rozsahu dle Přílohy č. 1;");
+  listItem("b) Tvorba video obsahu — natáčení, střih a postprodukce video materiálů v rozsahu dle Přílohy č. 1;");
+  listItem("c) Správa reklamních kampaní — nastavení, správa a optimalizace placených kampaní na platformách Meta (Facebook, Instagram) a Google Ads.");
+  y += 1;
+  para("1.3 Reklamní rozpočet (media budget) není součástí odměny Poskytovatele. Klient hradí náklady na reklamní systémy přímo provozovatelům platforem z vlastního účtu, nebo je hradí Poskytovateli na základě samostatného vyúčtování, bylo-li tak výslovně sjednáno v Příloze č. 1.");
+  para("1.4 Charakter závazku. Poskytovatel poskytuje služby s odbornou péčí, avšak negarantuje konkrétní obchodní výsledek (počet poptávek, obrat, dosah, konverze), neboť ten je závislý na faktorech mimo kontrolu Poskytovatele. Závazek Poskytovatele je závazkem činnostním, nikoli výsledkovým ve smyslu § 2430 OZ. Nedosažení očekávaných výsledků není vadou plnění a nezakládá právo Klienta na slevu z odměny ani na odstoupení od Smlouvy.");
+  para("1.5 Práce nad rámec Přílohy č. 1 (dále jen „Vícepráce“) realizuje Poskytovatel pouze na základě předchozího písemného odsouhlasení rozsahu a ceny Klientem; za písemnou formu se pro tento účel považuje i e-mail.");
+
+  heading("ČLÁNEK 2 — DOBA TRVÁNÍ A ZÁVAZKOVÉ OBDOBÍ");
+  para(`2.1 Smlouva se uzavírá na dobu neurčitou s účinností od ${today}.`);
+  para(`2.2 Klient se zavazuje odebírat služby po dobu minimálního závazkového období v délce ${commitment.months} měsíců (dále jen „Závazkové období“), počítáno od prvního dne měsíce následujícího po nabytí účinnosti Smlouvy. Za toto období mu náleží Zvýhodněná cena dle čl. 3.`);
+  para(`2.3 Po uplynutí Závazkového období Smlouva automaticky přechází v závazek na dobu neurčitou s výpovědní dobou ${SUPPLIER.noticePeriodMonths} měsíce (počítanou od prvního dne měsíce následujícího po doručení výpovědi), přičemž Zvýhodněná cena zůstává zachována, nedohodnou-li se strany jinak.`);
+  para("2.4 Smluvní strany se mohou písemně dohodnout na sjednání navazujícího Závazkového období s odpovídající úrovní Zvýhodněné ceny.");
+
+  heading("ČLÁNEK 3 — CENA A SLEVOVÝ MODEL");
+  para(`3.1 Základní ceníková cena. Základní ceníková cena za plnění dle Přílohy č. 1 činí ${formatKc(basePrice)} měsíčně (dále jen „Základní cena“). Základní cena se uplatní vždy, není-li sjednáno Závazkové období, nebo dojde-li k situaci předvídané v čl. 4.`);
+  para("3.2 Zvýhodněná cena. Sjedná-li Klient Závazkové období, náleží mu sleva ze Základní ceny podle následující tabulky:");
+  y += 1;
+  ensureSpace(8 * (COMMITMENTS.length + 1));
+  doc.setFillColor(245, 240, 250);
+  doc.rect(marginX, y - 4.5, 170, 6.5 * COMMITMENTS.length + 6, "F");
+  tableRow("Závazkové období", "Zvýhodněná cena / měsíc", true);
+  if (pkg) {
+    COMMITMENTS.forEach((c) => {
+      const price = pkg.pricing[c.id];
+      const pct = basePrice > 0 ? Math.round((1 - price / basePrice) * 100) : 0;
+      tableRow(`${c.label}${c.id === "none" ? "" : ` (sleva ${pct} %)`}`, formatKc(price));
+    });
+  }
+  y += 3;
+  para(`Klient tímto sjednává Závazkové období v délce ${commitment.months} měsíců a Zvýhodněnou cenu ve výši ${formatKc(discountPrice)} měsíčně (dále jen „Zvýhodněná cena“).`);
+  para("3.3 Povaha slevy. Smluvní strany výslovně prohlašují a shodně konstatují, že Zvýhodněná cena je poskytnuta výhradně jako protiplnění za závazek Klienta setrvat ve smluvním vztahu po celé Závazkové období. Sleva má povahu zálohového zvýhodnění poskytnutého předem, jehož ekonomickým důvodem je delší doba spolupráce umožňující Poskytovateli efektivnější alokaci kapacit a nákladů. Klient tento důvod slevy bere na vědomí a souhlasí s ním.");
+  para(`3.4 Splatnost a fakturace. Odměna se hradí měsíčně na základě faktury vystavené Hlavním poskytovatelem vždy k ${SUPPLIER.invoiceDay}. dni kalendářního měsíce, se splatností 14 dnů ode dne vystavení. Odměna je splatná i tehdy, nebyly-li služby čerpány v plném rozsahu z důvodů na straně Klienta (viz čl. 5).`);
+  para("3.5 Prodlení. V případě prodlení Klienta s úhradou o více než 10 dnů je Poskytovatel oprávněn:");
+  listItem("a) účtovat úrok z prodlení ve výši 0,05 % z dlužné částky za každý den prodlení;");
+  listItem("b) po předchozím upozornění (postačí e-mail) přerušit poskytování služeb včetně pozastavení reklamních kampaní, a to až do úplné úhrady. Po dobu přerušení trvá povinnost Klienta hradit odměnu v plné výši a Poskytovatel není v prodlení s plněním.");
+  y += 1;
+  para("3.6 Indexace. Poskytovatel je oprávněn jednou ročně, vždy k 1. lednu, upravit Základní i Zvýhodněnou cenu o míru inflace vyhlášenou ČSÚ za předchozí kalendářní rok, přesáhla-li 3 %. Zvýšení oznámí Klientovi nejméně 30 dnů předem.");
+
+  heading("ČLÁNEK 4 — SMLUVNÍ POKUTA PŘI PŘEDČASNÉM UKONČENÍ (DOPLATEK SLEVY)");
+  para("4.1 Ukončí-li Klient tuto Smlouvu před uplynutím Závazkového období — ať už výpovědí, odstoupením bez zákonného či smluvního důvodu, jednostranným ukončením odběru služeb, nebo dojde-li k ukončení Smlouvy odstoupením Poskytovatele z důvodu porušení povinností Klientem — zaniká zpětně nárok Klienta na Zvýhodněnou cenu.");
+  para("4.2 V takovém případě je Klient povinen zaplatit Poskytovateli doplatek slevy, jehož výše se stanoví jako: Doplatek = (Základní cena − Zvýhodněná cena) × počet měsíců, za které již bylo plnění poskytnuto.");
+  para("4.3 Smluvní strany výslovně sjednávají, že doplatek slevy dle čl. 4.2 má povahu smluvní pokuty podle § 2048 OZ za porušení povinnosti Klienta setrvat ve smluvním vztahu po Závazkové období. Smluvní strany prohlašují, že výši smluvní pokuty považují s ohledem na hodnotu a význam zajišťované povinnosti za přiměřenou (§ 2051 OZ).");
+  para("4.4 Doplatek slevy je splatný do 14 dnů ode dne zániku Smlouvy, na základě faktury Poskytovatele.");
+  para("4.5 Ujednáním o smluvní pokutě není dotčeno právo Poskytovatele na náhradu škody vzniklé porušením povinnosti, a to v rozsahu přesahujícím smluvní pokutu (§ 2050 OZ se tímto vylučuje).");
+  para("4.6 Výjimky. Doplatek slevy Klient neplatí, pokud Smlouvu ukončí:");
+  listItem("a) z důvodu podstatného porušení Smlouvy Poskytovatelem, které Poskytovatel neodstranil ani do 15 dnů od písemné výzvy Klienta;");
+  listItem("b) dohodou obou stran, je-li tak výslovně v dohodě uvedeno.");
+
+  heading("ČLÁNEK 5 — SOUČINNOST KLIENTA");
+  para("5.1 Klient se zavazuje poskytovat Poskytovateli veškerou součinnost nezbytnou pro řádné plnění, zejména:");
+  listItem("a) předávat podklady (fotografie, produktová data, reference, informace o firmě, přístupy) nejpozději do 5 pracovních dnů od vyžádání;");
+  listItem("b) zpřístupnit Poskytovateli správcovské přístupy k reklamním účtům, profilům na sociálních sítích a webu (Meta Business Suite, Google Ads, Google Analytics, GBP);");
+  listItem("c) schvalovat předložený obsah do 3 pracovních dnů od jeho odeslání;");
+  listItem("d) zajistit součinnost při natáčení (dostupnost osob, prostor, techniky) v termínech dohodnutých nejméně 7 dnů předem;");
+  listItem("e) určit jednu kontaktní osobu oprávněnou obsah schvalovat.");
+  y += 1;
+  para("5.2 Fikce schválení. Nevyjádří-li se Klient k předloženému obsahu ve lhůtě dle čl. 5.1 písm. c), považuje se obsah za schválený a Poskytovatel je oprávněn jej publikovat. Klient nemůže následně uplatňovat výhrady k takto schválenému obsahu.");
+  para("5.3 Prodlení Klienta se součinností. Neposkytne-li Klient součinnost řádně a včas, platí, že povinnost Klienta hradit měsíční odměnu v plné výši trvá nedotčena, Poskytovatel není v prodlení s plněním, a služby, které nemohly být z tohoto důvodu poskytnuty, se považují za poskytnuté a vyčerpané bez nároku na náhradu či slevu.");
+  para("5.4 Trvá-li prodlení Klienta se součinností déle než 30 dnů, je Poskytovatel oprávněn od Smlouvy odstoupit s účinky dle čl. 4.1 (Klient hradí doplatek slevy).");
+  para("5.5 Klient odpovídá za správnost, pravdivost a právní bezvadnost podkladů, které Poskytovateli předá. Uplatní-li vůči Poskytovateli třetí osoba nárok z důvodu vady podkladů dodaných Klientem, Klient odškodní Poskytovatele v plném rozsahu včetně nákladů právního zastoupení.");
+
+  heading("ČLÁNEK 6 — AUTORSKÁ PRÁVA A LICENCE");
+  para("6.1 Obsah vytvořený Poskytovatelem (videa, grafika, fotografie, texty, kreativy — dále jen „Dílo“) je autorským dílem podle zák. č. 121/2000 Sb., autorský zákon.");
+  para("6.2 Odkládací podmínka. Klient nabývá licenci k Dílu až okamžikem úplné úhrady odměny za měsíc, v němž bylo Dílo vytvořeno (§ 548 OZ). Do úplného zaplacení Klient není oprávněn Dílo užívat nad rámec prosté konzumace v rámci kanálů spravovaných Poskytovatelem.");
+  para("6.3 Rozsah licence. Po splnění podmínky dle čl. 6.2 poskytuje Poskytovatel Klientovi licenci nevýhradní, územně a časově neomezenou (po dobu trvání majetkových práv), ke všem způsobům užití obvyklým pro marketingovou propagaci Klienta, bez práva poskytnout podlicenci třetí osobě a bez práva Dílo upravovat či zpracovávat bez souhlasu Poskytovatele.");
+  para("6.4 Odměna za licenci je zahrnuta v měsíční odměně dle čl. 3.");
+  para("6.5 Užije-li Klient Dílo před splněním odkládací podmínky, jde o neoprávněný zásah do autorského práva a Klient je povinen uhradit Poskytovateli smluvní pokutu ve výši dvojnásobku měsíční Základní ceny za každé takové Dílo.");
+  para("6.6 Zdrojová data (projektové soubory střihu, vrstvené grafiky, RAW záznamy, surové video materiály) nejsou součástí licence a zůstávají výhradním majetkem Poskytovatele.");
+  para("6.7 Reference. Poskytovatel je oprávněn uvádět Klienta (obchodní firmu, logo) a vytvořené Dílo ve svém portfoliu a referencích po celou dobu trvání i po skončení Smlouvy. Klient tento souhlas může písemně odvolat pouze z vážných důvodů.");
+
+  heading("ČLÁNEK 7 — ODPOVĚDNOST A OMEZENÍ NÁHRADY ŠKODY");
+  para("7.1 Poskytovatel neodpovídá za jednání, rozhodnutí, sankce ani technické výpadky provozovatelů platforem (Meta, Google), za výsledky kampaní a obchodní výsledky Klienta, za obsah dodaný Klientem, ani za škodu vzniklou v důsledku nesprávných či neúplných informací Klienta.");
+  para("7.2 Limitace. Celková výše náhrady škody, kterou je Poskytovatel povinen Klientovi uhradit, je omezena částkou odpovídající součtu odměn skutečně uhrazených Klientem za posledních 3 měsíce předcházejících vzniku škodné události. Toto omezení se neuplatní v případě škody způsobené úmyslně nebo z hrubé nedbalosti.");
+  para("7.3 Poskytovatel neodpovídá za nepřímou škodu, ušlý zisk, ztrátu dat ani ztrátu obchodní příležitosti.");
+
+  heading("ČLÁNEK 8 — MLČENLIVOST A OCHRANA ÚDAJŮ");
+  para("8.1 Smluvní strany se zavazují zachovávat mlčenlivost o všech důvěrných informacích druhé strany, a to po dobu trvání Smlouvy a 3 roky po jejím skončení.");
+  para("8.2 Poskytovatel zpracovává osobní údaje v postavení zpracovatele Klienta v rozsahu nezbytném pro plnění Smlouvy; podrobnosti upravuje Příloha č. 2 — Zpracovatelská smlouva (DPA) dle čl. 28 GDPR.");
+  para("8.3 Zákaz obcházení. Klient se zavazuje po dobu trvání Smlouvy a 6 měsíců po jejím skončení přímo neoslovovat ani nezaměstnávat členy realizačního týmu Poskytovatele s nabídkou spolupráce mimo Poskytovatele. Při porušení je Klient povinen uhradit smluvní pokutu ve výši trojnásobku měsíční Základní ceny.");
+
+  heading("ČLÁNEK 9 — UKONČENÍ SMLOUVY A PŘEDÁNÍ");
+  para("9.1 Poskytovatel je oprávněn od Smlouvy odstoupit s okamžitou účinností, pokud Klient je v prodlení s úhradou déle než 30 dnů, neposkytuje součinnost déle než 30 dnů, požaduje plnění v rozporu s právními předpisy nebo jedná způsobem poškozujícím dobré jméno Poskytovatele. V těchto případech vzniká nárok na doplatek slevy dle čl. 4.");
+  para("9.2 Po skončení Smlouvy a úplném vypořádání všech pohledávek Poskytovatel předá Klientovi správcovské přístupy k účtům vedeným na Klienta, předá Dílo v běžných exportních formátech (MP4, JPG, PNG) a odstraní své administrátorské přístupy.");
+  para("9.3 Do úplného vypořádání pohledávek není Poskytovatel povinen předat přístupy, Dílo ani jakékoli podklady; zadržovací právo dle § 1395 OZ se tímto sjednává výslovně.");
+
+  heading("ČLÁNEK 10 — ZÁVĚREČNÁ USTANOVENÍ");
+  para("10.1 Smluvní strany prohlašují, že Smlouvu uzavírají v rámci své podnikatelské činnosti. Klient není spotřebitelem ani slabší smluvní stranou dle § 433 OZ.");
+  para("10.2 Klient prohlašuje, že měl dostatečnou příležitost se s obsahem Smlouvy seznámit, byl na všechna ustanovení, která by pro něj mohla být neobvyklá — zejména čl. 4, 5.3, 6.2 a 7.2 — výslovně upozorněn a jejich význam mu byl vysvětlen; s těmito ustanoveními souhlasí. Ustanovení § 1799 a § 1800 OZ o adhezních smlouvách se neuplatní.");
+  para("10.3 Klient přebírá nebezpečí změny okolností dle § 1765 odst. 2 OZ; nemůže se domáhat obnovení jednání o Smlouvě.");
+  para(`10.4 Právní jednání dle této Smlouvy lze činit e-mailem na adresy: Poskytovatel ${SUPPLIER.email}, Klient ${client.email || "[DOPLŇTE]"}. Zpráva se považuje za doručenou následující pracovní den po odeslání. Výpověď a odstoupení musí být doručeny doporučeně poštou nebo datovou schránkou.`);
+  para("10.5 Je-li některé ustanovení neplatné či neúčinné, nedotýká se to ostatních; strany nahradí neplatné ustanovení novým, které nejlépe odpovídá jeho hospodářskému účelu.");
+  para("10.6 Smlouvu lze měnit pouze písemnými číslovanými dodatky podepsanými oběma stranami. Změny Přílohy č. 1 (rozsah služeb) lze provést i potvrzenou e-mailovou dohodou.");
+  para("10.7 Smlouva se řídí právem České republiky. K řešení sporů je místně příslušný soud podle sídla Hlavního poskytovatele (§ 89a o.s.ř.).");
+  para("10.8 Smlouva nabývá platnosti a účinnosti dnem podpisu poslední ze smluvních stran.");
+  para("10.9 Přílohy: Příloha č. 1 — Specifikace plnění a ceník. Příloha č. 2 — Zpracovatelská smlouva (DPA) — je vedena samostatně mimo tento dokument.");
+
+  y += 8;
+  ensureSpace(34);
+  doc.setDrawColor(150, 150, 155);
+  doc.line(marginX, y, marginX + 60, y);
+  doc.line(120, y, 180, y);
+  setNormal(8.5);
+  doc.setTextColor(110, 110, 115);
+  doc.text(`${SUPPLIER.name}, Hlavní poskytovatel`, marginX, y + 5);
+  doc.text(`${client.contact || "Klient"}`, 120, y + 5);
+  y += 14;
+  doc.line(marginX, y, marginX + 60, y);
+  doc.text(`${SUPPLIER.coProvider.name}, Spolupracující poskytovatel`, marginX, y + 5);
+  y += 16;
+  para(`V Brně dne ${today}`, 8.5);
+
+  // Příloha č. 1
+  doc.addPage();
+  y = 20;
+  heading("PŘÍLOHA Č. 1 — SPECIFIKACE PLNĚNÍ A CENÍK", 13);
+  para(`Zvolený balíček: ${pkg ? pkg.name : "[DOPLŇTE]"}`, 10.5);
+  y += 2;
+  if (pkg) {
+    setBold(9.5);
+    doc.setTextColor(20, 20, 20);
+    doc.text("Rozsah služeb:", marginX, y);
+    y += 6;
+    pkg.features.forEach((f) => listItem(`• ${f}`));
+    y += 3;
+  }
+  heading("Ceny", 10.5);
+  tableRow("Základní ceníková cena", `${formatKc(basePrice)} / měsíc`);
+  tableRow("Sjednané Závazkové období", `${commitment.months} měsíců`);
+  tableRow("Zvýhodněná cena", `${formatKc(discountPrice)} / měsíc`, true);
+  tableRow("Rozdíl (základ pro doplatek dle čl. 4)", `${formatKc(basePrice - discountPrice)} / měsíc`);
+  y += 4;
+  para("Doporučený media budget (nezávazně): [DOPLŇTE] Kč / měsíc — hrazen Klientem přímo platformám.", 9);
+  para("Sazby za vícepráce: [DOPLŇTE] Kč / hodina, natáčecí den navíc [DOPLŇTE] Kč.", 9);
+
+  const filenameSafe = (client.company || "klient").replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
+  doc.save(`smlouva-progma-${filenameSafe}.pdf`);
+}
+
 /* ============================== SHARED UI ============================== */
 /* Fonts, scrollbar, selection and focus-visible styles live in the shared
    src/index.css (same file the main site uses) — imported once in admin/main.jsx,
@@ -620,6 +962,17 @@ function Sidebar({ activeTab, setActiveTab, userEmail, onSignOut }) {
           <div className="font-display text-sm font-semibold text-white">Progma Admin</div>
           <div className="font-jb text-xs uppercase tracking-wider text-zinc-500">Sales &amp; CRM</div>
         </div>
+      </div>
+
+      <div className="px-2 lg:px-3 pt-3">
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
+          className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-zinc-500 hover:text-white border border-white/10 hover:border-violet-500/40 hover:bg-white/5 transition-colors"
+        >
+          <Search className="w-4 h-4 shrink-0" />
+          <span className="hidden lg:inline">Hledat</span>
+          <kbd className="hidden lg:inline ml-auto text-[10px] font-jb border border-white/10 rounded px-1.5 py-0.5 text-zinc-600">⌘K</kbd>
+        </button>
       </div>
 
       <nav className="flex-1 px-2 lg:px-3 py-4 space-y-1">
@@ -694,6 +1047,14 @@ function Dashboard({ clients, tasks, insertTask, updateTask, removeTask, setActi
     .flatMap((c) => c.notes.map((n) => ({ ...n, clientId: c.id, clientName: c.company, parsed: parseCzDate(n.date) })))
     .sort((a, b) => (b.parsed?.getTime() || 0) - (a.parsed?.getTime() || 0))
     .slice(0, 6);
+
+  const upcomingFollowUps = clients
+    .filter((c) => c.nextFollowUp)
+    .map((c) => ({ ...c, followUpDate: new Date(c.nextFollowUp) }))
+    .sort((a, b) => a.followUpDate.getTime() - b.followUpDate.getTime())
+    .slice(0, 6);
+
+  const todayStart = new Date(new Date().toDateString());
 
   const toggleTask = (id) => {
     const task = tasks.find((t) => t.id === id);
@@ -890,6 +1251,35 @@ function Dashboard({ clients, tasks, insertTask, updateTask, removeTask, setActi
         </GlassCard>
       </div>
 
+      {upcomingFollowUps.length > 0 && (
+        <GlassCard className="p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <Calendar className="w-4 h-4 text-violet-400" />
+            <h2 className="font-display text-lg font-semibold text-white">Blíží se kontakt</h2>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {upcomingFollowUps.map((c) => {
+              const overdue = c.followUpDate < todayStart;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => goToClient(c.id)}
+                  className={`text-left rounded-xl border px-4 py-3 transition-colors ${
+                    overdue ? "border-rose-500/30 bg-rose-500/5 hover:border-rose-500/50" : "border-white/10 hover:border-violet-500/40"
+                  }`}
+                >
+                  <div className="text-sm font-medium text-white truncate">{c.company}</div>
+                  <div className={`text-xs mt-1 font-jb ${overdue ? "text-rose-300" : "text-zinc-500"}`}>
+                    {c.followUpDate.toLocaleDateString("cs-CZ")}
+                    {overdue ? " — po termínu" : ""}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </GlassCard>
+      )}
+
       <GlassCard className="p-6">
         <div className="flex items-center gap-2 mb-5">
           <Activity className="w-4 h-4 text-violet-400" />
@@ -955,6 +1345,7 @@ function ClientEditForm({ initial, onSave, onCancel, saveLabel = "Uložit", savi
             <option value="novy_lead">Nový lead</option>
             <option value="aktivni">Aktivní</option>
             <option value="pozastaveno">Pozastaveno</option>
+            <option value="ztraceny">Ztracený lead</option>
           </select>
         </Field>
         <Field label="Telefon"><input value={form.phone} onChange={set("phone")} className={`${inputClass} font-jb`} placeholder="+420 777 123 456" /></Field>
@@ -983,6 +1374,9 @@ function ClientEditForm({ initial, onSave, onCancel, saveLabel = "Uložit", savi
         </Field>
         <Field label="Štítky (oddělte čárkou)">
           <input value={form.tags} onChange={set("tags")} className={inputClass} placeholder="VIP, sezónní, follow-up" />
+        </Field>
+        <Field label="Připomenout další kontakt">
+          <input type="date" value={form.nextFollowUp} onChange={set("nextFollowUp")} className={`${inputClass} font-jb`} />
         </Field>
         <Field label="Balíček">
           <select value={form.packageId} onChange={set("packageId")} className={inputClass}>
@@ -1037,6 +1431,94 @@ function ClientEditForm({ initial, onSave, onCancel, saveLabel = "Uložit", savi
           {saving ? "Ukládám…" : saveLabel}
         </button>
         <button onClick={onCancel} className="text-sm text-zinc-500 hover:text-white transition-colors">Zrušit</button>
+      </div>
+    </div>
+  );
+}
+
+function ClientReportView({ client, sortedPerformance, totalLeads, totalSpend, totalRevenue, roiText, maxLeads, onClose }) {
+  useEffect(() => {
+    const handleKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  const pkg = packageById(client.packageId) || packageById(client.potentialPackageId);
+  const notedEntries = [...sortedPerformance].reverse().filter((r) => r.note);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-zinc-950 overflow-y-auto">
+      <button
+        onClick={onClose}
+        className="fixed top-6 right-6 inline-flex items-center justify-center w-10 h-10 rounded-full border border-white/15 bg-zinc-900/80 backdrop-blur-md text-zinc-300 hover:text-white hover:border-violet-400/50 transition-colors z-10"
+      >
+        <X className="w-4 h-4" />
+      </button>
+
+      <div className="max-w-4xl mx-auto px-6 sm:px-8 py-16 sm:py-20">
+        <div className="text-center mb-14">
+          <span className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-400 to-violet-700 mb-6 shadow-lg shadow-violet-900/50">
+            <span className="font-display text-lg font-bold text-white">P</span>
+          </span>
+          <p className="font-jb text-xs uppercase tracking-widest text-violet-400 mb-3">Report spolupráce</p>
+          <h1 className="font-display text-3xl sm:text-4xl font-semibold text-white mb-2">{client.company}</h1>
+          {pkg && <p className="text-zinc-500 text-sm">Balíček {pkg.name} · klientem od {client.since}</p>}
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
+            <div className="font-display text-3xl sm:text-4xl font-semibold text-white mb-1">{totalLeads}</div>
+            <div className="text-xs text-zinc-500">poptávek celkem</div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
+            <div className="font-display text-2xl sm:text-3xl font-semibold text-white mb-1">{formatKc(totalSpend)}</div>
+            <div className="text-xs text-zinc-500">investice celkem</div>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
+            <div className="font-display text-2xl sm:text-3xl font-semibold text-white mb-1">{formatKc(totalRevenue)}</div>
+            <div className="text-xs text-zinc-500">obrat klienta</div>
+          </div>
+          <div className="rounded-2xl border border-violet-500/30 bg-violet-500/10 p-6 text-center">
+            <div className="font-display text-3xl sm:text-4xl font-semibold text-violet-300 mb-1">{roiText}</div>
+            <div className="text-xs text-violet-300/70">návratnost investice</div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 sm:p-8 mb-8">
+          <p className="text-sm text-zinc-500 mb-6">Počet nových poptávek podle měsíce spolupráce</p>
+          <div className="flex items-end gap-3 sm:gap-4 h-40 mb-3">
+            {sortedPerformance.map((r, i) => (
+              <div key={r.id} className="flex-1 flex flex-col items-center justify-end h-full">
+                <span className="font-jb text-sm font-semibold text-violet-200 mb-2">{r.leads}</span>
+                <motion.div
+                  initial={{ height: 0 }}
+                  animate={{ height: `${(r.leads / maxLeads) * 100}%` }}
+                  transition={{ duration: 0.6, delay: i * 0.05, ease: "easeOut" }}
+                  className="w-full rounded-t-lg bg-gradient-to-t from-violet-700 to-violet-400"
+                  style={{ minHeight: r.leads > 0 ? "4px" : "0" }}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-3 sm:gap-4">
+            {sortedPerformance.map((r) => (
+              <span key={r.id} className="flex-1 text-center text-xs text-zinc-600 font-jb">{formatMonthLabel(r.month)}</span>
+            ))}
+          </div>
+        </div>
+
+        {notedEntries.length > 0 && (
+          <div className="space-y-3">
+            {notedEntries.map((r) => (
+              <div key={r.id} className="rounded-xl border border-white/10 px-5 py-4">
+                <div className="text-xs font-jb text-zinc-600 mb-1">{formatMonthLabel(r.month)}</div>
+                <div className="text-sm text-zinc-300">{r.note}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <p className="text-center text-xs text-zinc-700 mt-14">Esc pro ukončení prezentace</p>
       </div>
     </div>
   );
@@ -1106,6 +1588,9 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
     setNoteText("");
     setAddingTask(false);
     setTaskText("");
+    setAddingResult(false);
+    setResultForm({ month: "", leads: "", spend: "", revenue: "", note: "" });
+    setPresentingReport(false);
   };
 
   const patchFromForm = (form) => ({
@@ -1123,6 +1608,7 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
     leadSource: form.leadSource,
     tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
     channels: form.channels,
+    nextFollowUp: form.nextFollowUp || null,
     commitmentId: form.commitmentId,
     packageId: form.status === "novy_lead" ? null : form.packageId || null,
     potentialPackageId: form.status === "novy_lead" ? form.packageId || null : null,
@@ -1175,6 +1661,72 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
       });
   };
 
+  const [confirmationGenerating, setConfirmationGenerating] = useState(false);
+  const handleGenerateConfirmation = async () => {
+    if (!client) return;
+    setConfirmationGenerating(true);
+    try {
+      await generateCooperationConfirmationPdf(client);
+      showToast("Potvrzení o spolupráci staženo.");
+    } catch {
+      showToast("Vygenerování potvrzení se nepovedlo.", "error");
+    } finally {
+      setConfirmationGenerating(false);
+    }
+  };
+
+  const [contractGenerating, setContractGenerating] = useState(false);
+  const handleGenerateContract = async () => {
+    if (!client) return;
+    setContractGenerating(true);
+    try {
+      await generateContractPdf(client);
+      showToast("Smlouva vygenerována — zkontrolujte pole [DOPLŇTE] před odesláním.");
+    } catch {
+      showToast("Vygenerování smlouvy se nepovedlo.", "error");
+    } finally {
+      setContractGenerating(false);
+    }
+  };
+
+  const [addingResult, setAddingResult] = useState(false);
+  const [resultForm, setResultForm] = useState({ month: "", leads: "", spend: "", revenue: "", note: "" });
+  const [resultSaving, setResultSaving] = useState(false);
+  const [presentingReport, setPresentingReport] = useState(false);
+
+  const handleAddResult = async () => {
+    if (!client || !resultForm.month) return;
+    setResultSaving(true);
+    try {
+      const entry = {
+        id: Date.now(),
+        month: resultForm.month,
+        leads: Number(resultForm.leads) || 0,
+        spend: Number(resultForm.spend) || 0,
+        revenue: Number(resultForm.revenue) || 0,
+        note: resultForm.note.trim(),
+      };
+      await updateClient(client.id, { performance: [...(client.performance || []), entry] });
+      setResultForm({ month: "", leads: "", spend: "", revenue: "", note: "" });
+      setAddingResult(false);
+      showToast("Výsledek přidán.");
+    } catch {
+      showToast("Uložení výsledku se nepovedlo.", "error");
+    } finally {
+      setResultSaving(false);
+    }
+  };
+
+  const handleRemoveResult = async (id) => {
+    if (!client) return;
+    try {
+      await updateClient(client.id, { performance: (client.performance || []).filter((r) => r.id !== id) });
+      showToast("Výsledek smazán.");
+    } catch {
+      showToast("Smazání se nepovedlo.", "error");
+    }
+  };
+
   const handleAddNote = async () => {
     if (!client || !noteText.trim()) return;
     setNoteSaving(true);
@@ -1197,6 +1749,13 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
   const [taskText, setTaskText] = useState("");
   const [taskSaving, setTaskSaving] = useState(false);
   const clientTasks = client ? tasks.filter((t) => t.clientId === client.id) : [];
+
+  const sortedPerformance = client ? [...(client.performance || [])].sort((a, b) => a.month.localeCompare(b.month)) : [];
+  const totalLeads = sortedPerformance.reduce((s, r) => s + r.leads, 0);
+  const totalSpend = sortedPerformance.reduce((s, r) => s + r.spend, 0);
+  const totalRevenue = sortedPerformance.reduce((s, r) => s + r.revenue, 0);
+  const maxLeads = Math.max(1, ...sortedPerformance.map((r) => r.leads));
+  const roiText = totalSpend > 0 ? `${(totalRevenue / totalSpend).toFixed(1)}×` : "—";
 
   const handleAddClientTask = async () => {
     if (!client || !taskText.trim()) return;
@@ -1244,7 +1803,7 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
     }
   };
 
-  const createInitial = { company: "", contact: "", industry: "", status: "novy_lead", phone: "", email: "", address: "", ico: "", dic: "", website: "", owner: "", leadSource: "", tags: "", channels: [], commitmentId: "none", packageId: "" };
+  const createInitial = { company: "", contact: "", industry: "", status: "novy_lead", phone: "", email: "", address: "", ico: "", dic: "", website: "", owner: "", leadSource: "", tags: "", channels: [], nextFollowUp: "", commitmentId: "none", packageId: "" };
   const editInitial = client
     ? {
         company: client.company,
@@ -1261,6 +1820,7 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
         leadSource: client.leadSource || "",
         tags: (client.tags || []).join(", "),
         channels: client.channels || [],
+        nextFollowUp: client.nextFollowUp || "",
         commitmentId: client.commitmentId,
         packageId: client.packageId || client.potentialPackageId || "",
       }
@@ -1271,6 +1831,7 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
   const commitment = client ? COMMITMENTS.find((c) => c.id === client.commitmentId) || COMMITMENTS[0] : null;
 
   return (
+    <>
     <div className="h-screen flex flex-col">
       <div className="px-6 lg:px-10 pt-6 lg:pt-10 pb-4 shrink-0 flex items-start justify-between gap-4 flex-wrap">
         <div>
@@ -1315,6 +1876,7 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
             { id: "aktivni", label: "Aktivní" },
             { id: "novy_lead", label: "Leady" },
             { id: "pozastaveno", label: "Pozastaveno" },
+            { id: "ztraceny", label: "Ztracené" },
           ].map((f) => (
             <button
               key={f.id}
@@ -1467,6 +2029,18 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
                     <Radar className="w-4 h-4 text-violet-400 shrink-0" />
                     <span className="text-sm text-zinc-300">{client.leadSource || "Zdroj leadu neuveden"}</span>
                   </div>
+                  {client.nextFollowUp && (() => {
+                    const overdue = new Date(client.nextFollowUp) < new Date(new Date().toDateString());
+                    return (
+                      <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${overdue ? "border-rose-500/30 bg-rose-500/5" : "border-white/10"}`}>
+                        <Calendar className={`w-4 h-4 shrink-0 ${overdue ? "text-rose-400" : "text-violet-400"}`} />
+                        <span className={`text-sm ${overdue ? "text-rose-300" : "text-zinc-300"}`}>
+                          Další kontakt {new Date(client.nextFollowUp).toLocaleDateString("cs-CZ")}
+                          {overdue ? " — po termínu" : ""}
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {((client.tags && client.tags.length > 0) || (client.channels && client.channels.length > 0)) && (
@@ -1610,6 +2184,146 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
                   </div>
                 </div>
 
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs font-jb uppercase tracking-wide text-zinc-500">Výsledky spolupráce</h3>
+                    <div className="flex items-center gap-3">
+                      {sortedPerformance.length > 0 && (
+                        <button
+                          onClick={() => setPresentingReport(true)}
+                          className="inline-flex items-center gap-1.5 text-xs font-medium text-violet-300 hover:text-violet-200 transition-colors"
+                        >
+                          <MonitorPlay className="w-3.5 h-3.5" />
+                          Prezentovat klientovi
+                        </button>
+                      )}
+                      {!addingResult && (
+                        <button
+                          onClick={() => setAddingResult(true)}
+                          className="inline-flex items-center gap-1.5 text-xs font-medium text-violet-300 hover:text-violet-200 transition-colors"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Přidat výsledek
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {addingResult && (
+                    <div className="mb-3 rounded-xl border border-violet-500/30 bg-violet-500/5 p-4">
+                      <div className="grid sm:grid-cols-4 gap-3 mb-3">
+                        <input
+                          type="month"
+                          value={resultForm.month}
+                          onChange={(e) => setResultForm({ ...resultForm, month: e.target.value })}
+                          className={`${inputClass} font-jb`}
+                        />
+                        <input
+                          type="number"
+                          value={resultForm.leads}
+                          onChange={(e) => setResultForm({ ...resultForm, leads: e.target.value })}
+                          placeholder="Počet poptávek"
+                          className={inputClass}
+                        />
+                        <input
+                          type="number"
+                          value={resultForm.spend}
+                          onChange={(e) => setResultForm({ ...resultForm, spend: e.target.value })}
+                          placeholder="Investice (Kč)"
+                          className={inputClass}
+                        />
+                        <input
+                          type="number"
+                          value={resultForm.revenue}
+                          onChange={(e) => setResultForm({ ...resultForm, revenue: e.target.value })}
+                          placeholder="Obrat klienta (Kč)"
+                          className={inputClass}
+                        />
+                      </div>
+                      <input
+                        value={resultForm.note}
+                        onChange={(e) => setResultForm({ ...resultForm, note: e.target.value })}
+                        placeholder="Poznámka (nepovinné)"
+                        className={`${inputClass} mb-3`}
+                      />
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={handleAddResult}
+                          disabled={resultSaving || !resultForm.month}
+                          className="inline-flex items-center gap-2 rounded-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 px-4 py-2 text-xs font-semibold text-white transition-colors"
+                        >
+                          {resultSaving ? "Ukládám…" : "Uložit výsledek"}
+                        </button>
+                        <button
+                          onClick={() => { setAddingResult(false); setResultForm({ month: "", leads: "", spend: "", revenue: "", note: "" }); }}
+                          className="text-xs text-zinc-500 hover:text-white transition-colors"
+                        >
+                          Zrušit
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {sortedPerformance.length > 0 ? (
+                    <>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                        <div className="rounded-xl border border-white/10 px-3 py-2.5">
+                          <div className="text-xs text-zinc-500 mb-1">Poptávky celkem</div>
+                          <div className="font-jb text-lg font-semibold text-white">{totalLeads}</div>
+                        </div>
+                        <div className="rounded-xl border border-white/10 px-3 py-2.5">
+                          <div className="text-xs text-zinc-500 mb-1">Investice celkem</div>
+                          <div className="font-jb text-lg font-semibold text-white">{formatKc(totalSpend)}</div>
+                        </div>
+                        <div className="rounded-xl border border-white/10 px-3 py-2.5">
+                          <div className="text-xs text-zinc-500 mb-1">Obrat klienta</div>
+                          <div className="font-jb text-lg font-semibold text-white">{formatKc(totalRevenue)}</div>
+                        </div>
+                        <div className="rounded-xl border border-white/10 px-3 py-2.5">
+                          <div className="text-xs text-zinc-500 mb-1">Návratnost</div>
+                          <div className="font-jb text-lg font-semibold text-violet-300">{roiText}</div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-white/10 px-4 py-4 mb-3">
+                        <div className="flex items-end gap-2 h-20 mb-2">
+                          {sortedPerformance.map((r) => (
+                            <div key={r.id} className="flex-1 flex flex-col items-center justify-end h-full">
+                              <span className="text-xs font-jb text-violet-200 mb-1">{r.leads}</span>
+                              <div
+                                className="w-full rounded-t-md bg-gradient-to-t from-violet-700 to-violet-400"
+                                style={{ height: `${(r.leads / maxLeads) * 100}%`, minHeight: r.leads > 0 ? "4px" : "0" }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          {sortedPerformance.map((r) => (
+                            <span key={r.id} className="flex-1 text-center text-xs text-zinc-600 font-jb">{formatMonthLabel(r.month)}</span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        {[...sortedPerformance].reverse().map((r) => (
+                          <div key={r.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 group">
+                            <span className="text-xs font-jb text-zinc-500 w-14 shrink-0">{formatMonthLabel(r.month)}</span>
+                            <span className="text-sm text-zinc-300 flex-1 truncate">{r.note || `${r.leads} poptávek, obrat ${formatKc(r.revenue)}`}</span>
+                            <button
+                              onClick={() => handleRemoveResult(r.id)}
+                              className="shrink-0 opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-rose-400 transition-all"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    !addingResult && <p className="text-sm text-zinc-600">Zatím žádné zaznamenané výsledky.</p>
+                  )}
+                </div>
+
                 <div className="flex items-center gap-3 flex-wrap">
                   <button
                     onClick={() => openCalculatorFor(client.id)}
@@ -1618,6 +2332,26 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
                     <Calculator className="w-4 h-4" />
                     Otevřít kalkulaci pro tohoto klienta
                   </button>
+                  {client.status !== "novy_lead" && (
+                    <button
+                      onClick={handleGenerateContract}
+                      disabled={contractGenerating}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/15 hover:border-violet-500/40 hover:bg-white/5 disabled:opacity-50 px-5 py-2.5 text-sm font-medium text-zinc-300 hover:text-white transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                      {contractGenerating ? "Generuji…" : "Generovat smlouvu"}
+                    </button>
+                  )}
+                  {client.status !== "novy_lead" && (
+                    <button
+                      onClick={handleGenerateConfirmation}
+                      disabled={confirmationGenerating}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/15 hover:border-violet-500/40 hover:bg-white/5 disabled:opacity-50 px-5 py-2.5 text-sm font-medium text-zinc-300 hover:text-white transition-colors"
+                    >
+                      <FileText className="w-4 h-4" />
+                      {confirmationGenerating ? "Generuji…" : "Potvrzení o spolupráci"}
+                    </button>
+                  )}
                   {client.status !== "novy_lead" && (
                     <button
                       onClick={toggleStatus}
@@ -1634,6 +2368,19 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
         </div>
       </div>
     </div>
+    {presentingReport && client && (
+      <ClientReportView
+        client={client}
+        sortedPerformance={sortedPerformance}
+        totalLeads={totalLeads}
+        totalSpend={totalSpend}
+        totalRevenue={totalRevenue}
+        roiText={roiText}
+        maxLeads={maxLeads}
+        onClose={() => setPresentingReport(false)}
+      />
+    )}
+    </>
   );
 }
 
@@ -1644,34 +2391,39 @@ function PresentationView({ presentMode, setPresentMode }) {
   const next = () => setSlide((s) => Math.min(s + 1, SLIDES.length - 1));
   const prev = () => setSlide((s) => Math.max(s - 1, 0));
 
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); next(); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); prev(); }
+      if (e.key === "Escape" && presentMode) setPresentMode(false);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presentMode]);
+
   return (
     <div className={`flex flex-col ${presentMode ? "h-screen bg-zinc-950 p-6" : "p-6 lg:p-10"}`}>
       {!presentMode && (
         <div className="mb-6">
           <h1 className="font-display text-2xl lg:text-3xl font-semibold text-white">Prezentace</h1>
-          <p className="text-zinc-500 text-sm mt-1">Slide {slide + 1} z {SLIDES.length} · {SLIDES[slide]}</p>
+          <p className="text-zinc-500 text-sm mt-1">Slide {slide + 1} z {SLIDES.length} · {SLIDES[slide].title}</p>
         </div>
       )}
 
       <div className="flex-1 flex flex-col min-h-0">
-        <GlassCard className="flex-1 flex flex-col items-center justify-center relative overflow-hidden" style={{ minHeight: "50vh" }}>
-          <div
-            className="absolute inset-0 opacity-40"
-            style={{ backgroundImage: "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(168,85,247,0.15), transparent 70%)" }}
-          />
+        <GlassCard className="flex-1 flex flex-col items-center justify-center relative overflow-hidden p-2 sm:p-4" style={{ minHeight: "50vh" }}>
           <AnimatePresence mode="wait">
-            <motion.div
+            <motion.img
               key={slide}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.25 }}
-              className="relative text-center px-6"
-            >
-              <MonitorPlay className="w-10 h-10 text-violet-400 mx-auto mb-5" />
-              <p className="font-display text-xl lg:text-2xl text-white mb-2">Zde se načte interaktivní slajd</p>
-              <p className="text-sm text-zinc-400 mt-1">{SLIDES[slide]}</p>
-            </motion.div>
+              src={SLIDES[slide].image}
+              alt={SLIDES[slide].title}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="w-full h-full object-contain rounded-lg"
+            />
           </AnimatePresence>
 
           <button
@@ -1695,7 +2447,13 @@ function PresentationView({ presentMode, setPresentMode }) {
 
           <div className="flex items-center gap-1.5">
             {SLIDES.map((_, i) => (
-              <span key={i} className="w-1.5 h-1.5 rounded-full transition-colors" style={{ background: i === slide ? "#c084fc" : "rgba(255,255,255,0.15)" }} />
+              <button
+                key={i}
+                onClick={() => setSlide(i)}
+                aria-label={`Slide ${i + 1}`}
+                className="w-1.5 h-1.5 rounded-full transition-colors"
+                style={{ background: i === slide ? "#c084fc" : "rgba(255,255,255,0.15)" }}
+              />
             ))}
           </div>
 
@@ -1708,6 +2466,7 @@ function PresentationView({ presentMode, setPresentMode }) {
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
+        {!presentMode && <p className="text-center text-xs text-zinc-600 mt-3">Šipky ←/→ nebo mezerník pro listování, Esc pro ukončení celoobrazovkového režimu.</p>}
       </div>
     </div>
   );
@@ -2372,6 +3131,125 @@ function CodesView({ codes, insertCode, updateCode, removeCode }) {
   );
 }
 
+/* ============================== COMMAND PALETTE ============================== */
+
+function CommandPalette({ clients, setActiveTab, goToClient }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    const handleKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setOpen((o) => !o);
+      }
+      if (e.key === "Escape") setOpen(false);
+    };
+    const openHandler = () => setOpen(true);
+    window.addEventListener("keydown", handleKey);
+    window.addEventListener("open-command-palette", openHandler);
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+      window.removeEventListener("open-command-palette", openHandler);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      setQuery("");
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [open]);
+
+  if (!open) return null;
+
+  const q = query.trim().toLowerCase();
+
+  const sectionResults = NAV_ITEMS.filter((s) => !q || s.label.toLowerCase().includes(q));
+
+  const clientResults = clients
+    .filter(
+      (c) =>
+        !q ||
+        c.company.toLowerCase().includes(q) ||
+        c.contact.toLowerCase().includes(q) ||
+        (c.industry || "").toLowerCase().includes(q)
+    )
+    .slice(0, 6);
+
+  const goto = (fn) => {
+    fn();
+    setOpen(false);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] px-4 bg-zinc-950/70 backdrop-blur-sm"
+      onClick={() => setOpen(false)}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: -12, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.15 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg rounded-2xl border border-white/10 bg-zinc-900/95 shadow-2xl overflow-hidden"
+      >
+        <div className="flex items-center gap-3 px-4 py-3.5 border-b border-white/10">
+          <Search className="w-4 h-4 text-zinc-500 shrink-0" />
+          <input
+            ref={inputRef}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Hledat klienta nebo sekci…"
+            className="flex-1 bg-transparent text-sm text-white placeholder-zinc-600 focus:outline-none"
+          />
+          <kbd className="text-[10px] font-jb text-zinc-600 border border-white/10 rounded px-1.5 py-0.5">Esc</kbd>
+        </div>
+
+        <div className="max-h-80 overflow-y-auto py-2">
+          {clientResults.length > 0 && (
+            <div className="px-2 mb-2">
+              <div className="px-2.5 py-1.5 text-[10px] font-jb uppercase tracking-wider text-zinc-600">Klienti</div>
+              {clientResults.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => goto(() => goToClient(c.id))}
+                  className="w-full flex items-center gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-white/5 transition-colors"
+                >
+                  <Users className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                  <span className="text-sm text-zinc-200 flex-1 truncate">{c.company}</span>
+                  <span className="text-xs text-zinc-600 shrink-0">{c.contact}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {sectionResults.length > 0 && (
+            <div className="px-2">
+              <div className="px-2.5 py-1.5 text-[10px] font-jb uppercase tracking-wider text-zinc-600">Sekce</div>
+              {sectionResults.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => goto(() => setActiveTab(s.id))}
+                  className="w-full flex items-center gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-white/5 transition-colors"
+                >
+                  <s.icon className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                  <span className="text-sm text-zinc-200">{s.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {clientResults.length === 0 && sectionResults.length === 0 && (
+            <p className="text-sm text-zinc-600 text-center py-6">Nic nenalezeno.</p>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 /* ============================== ROOT ============================== */
 
 export default function AdminApp() {
@@ -2402,6 +3280,8 @@ export default function AdminApp() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-body antialiased flex">
+      <CommandPalette clients={clientsTable.rows} setActiveTab={setActiveTab} goToClient={goToClient} />
+
       {!presentMode && (
         <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} userEmail={session?.user?.email} onSignOut={signOut} />
       )}
