@@ -249,10 +249,11 @@ function GridTexture({ className = "" }) {
  * Ambient showreel background for the hero.
  *
  * - Always shows a static poster first (fast paint, works everywhere).
- * - Plays on both desktop and mobile — skipped only when the visitor has
- *   asked for reduced motion, or the browser reports Data Saver mode / a
- *   slow connection (where supported; Safari/iOS doesn't expose this, so
- *   video plays there by default).
+ * - Plays on both desktop and mobile, skipped only when the visitor has
+ *   asked for reduced motion. Playback is driven by an explicit .play()
+ *   call (with retries on canplay/loadeddata/visibilitychange) rather than
+ *   relying on the autoPlay attribute alone, since mobile browsers silently
+ *   drop that attribute more often than you'd expect.
  *
  * Drop your files in /public as:
  *   showreel.webm        (preferred, smaller)
@@ -262,15 +263,38 @@ function GridTexture({ className = "" }) {
 function HeroVideoBackground() {
   const [showVideo, setShowVideo] = useState(false);
   const [posterError, setPosterError] = useState(false);
+  const videoRef = useRef(null);
 
   useEffect(() => {
+    // Reduced-motion is a genuine accessibility signal from the visitor's OS —
+    // worth respecting even though it means no video for them. Everything
+    // else (data-saver, connection speed) was removed on purpose: it made
+    // the video skip itself on some phones for no visible reason.
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    // Network Information API isn't supported everywhere (notably Safari/iOS) —
-    // where it's missing we simply can't tell, so we don't block video on it.
-    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    const dataConscious = Boolean(conn?.saveData) || ["slow-2g", "2g", "3g"].includes(conn?.effectiveType);
-    setShowVideo(!reducedMotion && !dataConscious);
+    setShowVideo(!reducedMotion);
   }, []);
+
+  useEffect(() => {
+    if (!showVideo || !videoRef.current) return;
+    const video = videoRef.current;
+
+    // The autoPlay attribute alone is unreliable on mobile — browsers
+    // sometimes silently skip it (low power mode, a slow first frame, the
+    // tab having been backgrounded, etc.) without firing any error we could
+    // catch. Calling .play() ourselves and retrying on the events below
+    // catches the vast majority of those cases instead of leaving the
+    // visitor stuck on the static poster.
+    const tryPlay = () => { video.play().catch(() => {}); };
+    tryPlay();
+    video.addEventListener("canplay", tryPlay);
+    video.addEventListener("loadeddata", tryPlay);
+    document.addEventListener("visibilitychange", tryPlay);
+    return () => {
+      video.removeEventListener("canplay", tryPlay);
+      video.removeEventListener("loadeddata", tryPlay);
+      document.removeEventListener("visibilitychange", tryPlay);
+    };
+  }, [showVideo]);
 
   return (
     <div className="absolute inset-0 overflow-hidden bg-zinc-950">
@@ -289,11 +313,13 @@ function HeroVideoBackground() {
 
       {showVideo && (
         <video
+          ref={videoRef}
           className="absolute inset-0 w-full h-full object-cover object-top"
           autoPlay
           muted
           loop
           playsInline
+          preload="auto"
           poster="/showreel-poster.jpg"
           onError={() => setShowVideo(false)}
         >
@@ -445,7 +471,7 @@ function Hero() {
   const stats = [
     { icon: Zap, value: 14, suffix: "", label: "dní do spuštění kampaně" },
     { icon: MapPin, value: 1, suffix: "", label: "firma na obor a region" },
-    { icon: Clock, value: 0, suffix: "", label: "hodin marketingu navíc pro vás" },
+    { icon: Clock, value: 100, suffix: " %", label: "vašeho času zpět do podnikání" },
   ];
 
   return (
@@ -595,7 +621,7 @@ function WhyUs() {
       <div className="relative max-w-7xl mx-auto">
         <SectionHeading
           eyebrow="Proč Progma"
-          title="Nejlepší obchodní rozhodnutí, které letos uděláte"
+          title="Nejlepší obchodní rozhodnutí, které letos uděláte."
           sub="Jsme partner, kterému jde o vaše tržby stejně jako vám."
         />
 
@@ -649,7 +675,7 @@ function Pricing() {
       <div className="max-w-7xl mx-auto">
         <SectionHeading
           eyebrow="Investice, ne náklad"
-          title="Vyberte si tempo, kterým chcete růst"
+          title="Vyberte si tempo, kterým chcete růst."
           sub="Žádné skryté poplatky, žádné dlouhodobé zámky, které vás svazují. Jen tempo růstu, které si zvolíte sami."
           align="center"
         />
