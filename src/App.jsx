@@ -19,6 +19,8 @@ import {
   Sparkles,
   Send,
   Zap,
+  Cookie,
+  ArrowLeft,
 } from "lucide-react";
 
 
@@ -180,6 +182,42 @@ const TEAM = [
 
 /* ============================== UTILITIES ============================== */
 
+// Správa souhlasu s cookies. Volba se ukládá do localStorage prohlížeče
+// (běžný prohlížeč, ne sandboxované prostředí — tady je to v pořádku).
+//
+// Až budete přidávat Google Analytics nebo Meta Pixel, načtěte jejich skript
+// teprve po ověření souhlasu, např.:
+//   if (hasConsent("analytics")) { /* načíst Google Analytics */ }
+//   if (hasConsent("marketing")) { /* načíst Meta Pixel */ }
+// Nejjednodušší místo pro to je uvnitř useEffectu v komponentě CookieConsent
+// níže, hned po uložení souhlasu, a znovu při každém načtení stránky, pokud
+// souhlas už existuje.
+const COOKIE_CONSENT_KEY = "progma-cookie-consent";
+
+function getStoredConsent() {
+  try {
+    const raw = localStorage.getItem(COOKIE_CONSENT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function storeConsent(consent) {
+  try {
+    localStorage.setItem(COOKIE_CONSENT_KEY, JSON.stringify({ ...consent, timestamp: new Date().toISOString() }));
+  } catch {
+    // soukromé prohlížení apod. — appka funguje dál, jen si to nezapamatuje
+  }
+}
+
+// Pro budoucí použití při napojování Google Analytics / Meta Pixel.
+function hasConsent(category) {
+  const consent = getStoredConsent();
+  if (!consent) return false;
+  if (category === "necessary") return true;
+  return Boolean(consent[category]);
+}
 
 function GlowOrb({ className = "", color = "rgba(186,58,237,0.3)" }) {
   return (
@@ -557,7 +595,7 @@ function WhyUs() {
       <div className="relative max-w-7xl mx-auto">
         <SectionHeading
           eyebrow="Proč Progma"
-          title="Nejlepší obchodní rozhodnutí, které letos uděláte."
+          title="Nejlepší obchodní rozhodnutí, které letos uděláte"
           sub="Jsme partner, kterému jde o vaše tržby stejně jako vám."
         />
 
@@ -611,8 +649,8 @@ function Pricing() {
       <div className="max-w-7xl mx-auto">
         <SectionHeading
           eyebrow="Investice, ne náklad"
-          title="Vyberte si tempo, kterým chcete růst."
-          sub="Žádné skryté poplatky, žádné dlouhodobé závazky. Jen tempo růstu, které si zvolíte sami."
+          title="Vyberte si tempo, kterým chcete růst"
+          sub="Žádné skryté poplatky, žádné dlouhodobé zámky, které vás svazují. Jen tempo růstu, které si zvolíte sami."
           align="center"
         />
 
@@ -680,7 +718,7 @@ function Pricing() {
         </div>
 
         <p className="text-center text-xs text-zinc-600 mt-10">
-          * Ceny jsou uvedeny bez DPH. Minimální doporučená spolupráce 3 měsíce — systém potřebuje čas, aby ukázal svůj
+          * Ceny jsou uvedeny bez DPH. Minimální spolupráce 3 měsíce — systém potřebuje čas, aby ukázal svůj
           výkon.
         </p>
       </div>
@@ -1041,6 +1079,397 @@ function Contact() {
   );
 }
 
+/* ============================== POLICY PAGES ============================== */
+
+function PolicyLayout({ title, subtitle, children }) {
+  return (
+    <div className="pt-32 pb-24 sm:pt-40 sm:pb-32 px-6 sm:px-8 lg:px-12">
+      <div className="max-w-3xl mx-auto">
+        <a href="#" className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-white transition-colors mb-10">
+          <ArrowLeft className="w-4 h-4" />
+          Zpět na web
+        </a>
+        <h1 className="font-display text-3xl sm:text-4xl font-semibold text-white mb-3">{title}</h1>
+        {subtitle && <p className="text-sm text-zinc-500 mb-14">{subtitle}</p>}
+        <div className="space-y-12">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function PolicySection({ heading, children }) {
+  return (
+    <section>
+      {heading && <h2 className="font-display text-xl font-semibold text-white mb-4">{heading}</h2>}
+      <div className="space-y-4 text-sm text-zinc-400 leading-relaxed">{children}</div>
+    </section>
+  );
+}
+
+function PolicyTable({ head, rows }) {
+  return (
+    <div className="overflow-x-auto rounded-xl border border-white/10">
+      <table className="w-full text-xs text-left min-w-[640px]">
+        <thead>
+          <tr className="border-b border-white/10 bg-white/5">
+            {head.map((h) => (
+              <th key={h} className="p-3 font-medium text-zinc-300 align-top">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-white/5 text-zinc-400">
+          {rows.map((row, i) => (
+            <tr key={i}>
+              {row.map((cell, j) => (
+                <td key={j} className="p-3 align-top">{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PrivacyPolicyPage() {
+  return (
+    <PolicyLayout
+      title="Zásady ochrany osobních údajů"
+      subtitle="Zpracování osobních údajů na webu progma.cz ve smyslu nařízení (EU) 2016/679 (GDPR) a zákona č. 110/2019 Sb. — účinné od 23. 7. 2026"
+    >
+      <PolicySection heading="1. Kdo je správcem vašich údajů">
+        <p>Provozovatelem webu progma.cz a společnými správci vašich osobních údajů jsou:</p>
+        <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-zinc-300 space-y-1.5">
+          <div>Erik Eis, IČO: 29754674, se sídlem Novodvorská 1077, 674 01 Třebíč</div>
+          <div>Adam Kryštof, IČO: 23391472, se sídlem Oslavice 199, 594 01</div>
+        </div>
+        <p>(společně podnikající pod obchodním označením „Progma", dále jen „my" nebo „správce")</p>
+        <p>
+          Kontaktní e-mail pro ochranu údajů:{" "}
+          <a href="mailto:podpora@progma.cz" className="text-violet-300 hover:text-violet-200 transition-colors">
+            podpora@progma.cz
+          </a>
+        </p>
+        <p>Nejmenovali jsme pověřence pro ochranu osobních údajů (DPO), neboť nám tato povinnost ze zákona nevzniká.</p>
+      </PolicySection>
+
+      <PolicySection heading="2. Jaké údaje zpracováváme a proč">
+        <p>Osobní údaje zpracováváme pouze v rozsahu nezbytném pro daný účel. Přehled najdete v tabulce:</p>
+        <PolicyTable
+          head={["Účel", "Jaké údaje", "Právní základ", "Doba uložení"]}
+          rows={[
+            ["Vyřízení poptávky z kontaktního formuláře", "jméno, e-mail, telefon, obsah zprávy", "plnění opatření před uzavřením smlouvy (čl. 6 odst. 1 písm. b GDPR)", "po dobu jednání, poté max. 6 měsíců"],
+            ["Uzavření a plnění smlouvy o službách", "jméno, IČO, sídlo, e-mail, telefon, fakturační údaje", "plnění smlouvy (čl. 6 odst. 1 písm. b GDPR)", "po dobu smlouvy"],
+            ["Vedení účetnictví a plnění daňových povinností", "fakturační a platební údaje", "právní povinnost (čl. 6 odst. 1 písm. c GDPR)", "10 let (zákon o DPH / účetnictví)"],
+            ["Měření návštěvnosti (Google Analytics)", "cookies, IP adresa (zkrácená), údaje o zařízení a chování na webu", "souhlas (čl. 6 odst. 1 písm. a GDPR)", "dle nastavení cookies (viz čl. 8)"],
+            ["Marketing a remarketing (Meta Pixel)", "cookies, identifikátory zařízení, údaje o chování na webu", "souhlas (čl. 6 odst. 1 písm. a GDPR)", "dle nastavení cookies (viz čl. 8)"],
+            ["Ochrana našich právních nároků", "údaje z komunikace a smluv", "oprávněný zájem (čl. 6 odst. 1 písm. f GDPR)", "po dobu promlčecí lhůty"],
+          ]}
+        />
+        <p>
+          Poskytnutí údajů v kontaktním formuláři je dobrovolné, bez nich vás ale nemůžeme kontaktovat. Údaje pro
+          fakturaci jsou nezbytné pro plnění smlouvy a zákonných povinností.
+        </p>
+      </PolicySection>
+
+      <PolicySection heading="3. Komu údaje předáváme (zpracovatelé)">
+        <p>
+          Vaše údaje zpřístupňujeme pouze prověřeným poskytovatelům služeb, kteří je zpracovávají naším jménem na
+          základě zpracovatelské smlouvy. Jde zejména o:
+        </p>
+        <ul className="list-disc pl-5 space-y-1.5">
+          <li>poskytovatele webhostingu a e-mailu;</li>
+          <li>Google Ireland Ltd. — nástroj Google Analytics (měření návštěvnosti);</li>
+          <li>Meta Platforms Ireland Ltd. — nástroj Meta Pixel (marketing a remarketing);</li>
+          <li>účetní / daňového poradce;</li>
+          <li>poskytovatele CRM a nástrojů pro správu poptávek.</li>
+        </ul>
+        <p>
+          <strong className="text-zinc-300">Předání do třetích zemí.</strong> Někteří poskytovatelé (Google, Meta)
+          mohou údaje zpracovávat i mimo EU/EHP, zejména v USA. K takovému předání dochází na základě standardních
+          smluvních doložek schválených Evropskou komisí, případně rámce EU–US Data Privacy Framework, které
+          zajišťují odpovídající úroveň ochrany.
+        </p>
+        <p>Osobní údaje nikdy neprodáváme a nepředáváme třetím osobám pro jejich vlastní marketing.</p>
+      </PolicySection>
+
+      <PolicySection heading="4. Jaká máte práva">
+        <p>V souvislosti se zpracováním osobních údajů máte podle GDPR tato práva:</p>
+        <ul className="list-disc pl-5 space-y-1.5">
+          <li><strong className="text-zinc-300">Právo na přístup</strong> — zjistit, jaké údaje o vás zpracováváme.</li>
+          <li><strong className="text-zinc-300">Právo na opravu</strong> — nechat opravit nepřesné či neúplné údaje.</li>
+          <li><strong className="text-zinc-300">Právo na výmaz</strong> („být zapomenut") — nechat údaje smazat, není-li důvod je dále zpracovávat.</li>
+          <li><strong className="text-zinc-300">Právo na omezení zpracování</strong> — dočasně omezit zpracování.</li>
+          <li><strong className="text-zinc-300">Právo na přenositelnost</strong> — získat údaje ve strojově čitelném formátu.</li>
+          <li><strong className="text-zinc-300">Právo vznést námitku</strong> — proti zpracování založenému na oprávněném zájmu.</li>
+          <li><strong className="text-zinc-300">Právo odvolat souhlas</strong> — kdykoli, s účinky do budoucna (týká se cookies a marketingu).</li>
+        </ul>
+        <p>
+          Svá práva uplatníte e-mailem na{" "}
+          <a href="mailto:podpora@progma.cz" className="text-violet-300 hover:text-violet-200 transition-colors">
+            podpora@progma.cz
+          </a>
+          . Vyřídíme je bez zbytečného odkladu, nejpozději do jednoho měsíce.
+        </p>
+        <p>
+          <strong className="text-zinc-300">Stížnost u dozorového úřadu.</strong> Máte právo podat stížnost u Úřadu
+          pro ochranu osobních údajů, se sídlem Pplk. Sochora 27, 170 00 Praha 7,{" "}
+          <a href="https://www.uoou.cz" target="_blank" rel="noopener noreferrer" className="text-violet-300 hover:text-violet-200 transition-colors">
+            www.uoou.cz
+          </a>
+          .
+        </p>
+      </PolicySection>
+
+      <PolicySection heading="5. Zabezpečení údajů">
+        <p>
+          Přijali jsme přiměřená technická a organizační opatření k ochraně osobních údajů před neoprávněným
+          přístupem, ztrátou či zneužitím — zejména zabezpečený přenos dat (HTTPS), řízený přístup k údajům a
+          smluvní zavázání zpracovatelů k mlčenlivosti.
+        </p>
+      </PolicySection>
+
+      <PolicySection heading="6. Údaje dětí">
+        <p>Web ani naše služby nejsou určeny osobám mladším 15 let a osobní údaje takových osob vědomě nezpracováváme.</p>
+      </PolicySection>
+
+      <PolicySection heading="7. Změny těchto zásad">
+        <p>
+          Tyto zásady můžeme aktualizovat; aktuální znění je vždy dostupné na webu progma.cz s uvedením data
+          účinnosti. O podstatných změnách vás budeme informovat vhodným způsobem.
+        </p>
+      </PolicySection>
+    </PolicyLayout>
+  );
+}
+
+function CookiePolicyPage() {
+  return (
+    <PolicyLayout title="Zásady používání cookies" subtitle="Na webu progma.cz — účinné od 23. 7. 2026">
+      <PolicySection heading="1. Co jsou cookies">
+        <p>
+          Cookies jsou malé textové soubory, které se ukládají do vašeho prohlížeče při návštěvě webu. Slouží k
+          zajištění správného fungování webu, k měření návštěvnosti a k marketingu. Některé cookies jsou nezbytné,
+          jiné používáme pouze s vaším souhlasem.
+        </p>
+      </PolicySection>
+
+      <PolicySection heading="2. Jaké cookies používáme">
+        <PolicyTable
+          head={["Kategorie", "Účel", "Souhlas", "Příklad"]}
+          rows={[
+            ["Nezbytné (technické)", "Zajišťují základní funkce webu a odeslání formuláře. Bez nich web nefunguje.", "není potřeba", "session cookie, cookie souhlasu"],
+            ["Analytické", "Měří návštěvnost a chování na webu, abychom jej mohli zlepšovat (Google Analytics).", "vyžaduje souhlas", "_ga, _gid"],
+            ["Marketingové", "Umožňují cílení reklamy a remarketing na platformách Meta (Facebook, Instagram).", "vyžaduje souhlas", "_fbp (Meta Pixel)"],
+          ]}
+        />
+      </PolicySection>
+
+      <PolicySection heading="3. Souhlas a jeho odvolání">
+        <p>
+          Analytické a marketingové cookies aktivujeme až poté, co k tomu udělíte souhlas v cookie liště při vstupu
+          na web. Souhlas je dobrovolný a můžete jej kdykoli odvolat nebo změnit —{" "}
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("open-cookie-settings"))}
+            className="text-violet-300 hover:text-violet-200 underline underline-offset-2 transition-colors"
+          >
+            kliknutím zde
+          </button>{" "}
+          nebo přes odkaz „Nastavení cookies" v patičce webu. Odvolání souhlasu nemá vliv na zákonnost zpracování
+          před jeho odvoláním.
+        </p>
+        <p>
+          Cookies můžete rovněž spravovat či mazat přímo v nastavení svého prohlížeče. Blokování nezbytných cookies
+          však může omezit funkčnost webu.
+        </p>
+      </PolicySection>
+
+      <PolicySection heading="4. Doba uložení">
+        <p>
+          Nezbytné cookies trvají po dobu relace nebo krátce po ní. Analytické a marketingové cookies mají dobu
+          platnosti dle nastavení příslušných nástrojů (zpravidla několik měsíců až 2 roky).
+        </p>
+      </PolicySection>
+
+      <PolicySection heading="5. Další informace">
+        <p>
+          Zpracování osobních údajů získaných prostřednictvím cookies se řídí našimi{" "}
+          <a href="#zasady-ochrany-udaju" className="text-violet-300 hover:text-violet-200 transition-colors">
+            Zásadami ochrany osobních údajů
+          </a>
+          . V případě dotazů nás kontaktujte na{" "}
+          <a href="mailto:podpora@progma.cz" className="text-violet-300 hover:text-violet-200 transition-colors">
+            podpora@progma.cz
+          </a>
+          .
+        </p>
+      </PolicySection>
+    </PolicyLayout>
+  );
+}
+
+/* ============================== COOKIE CONSENT ============================== */
+
+const COOKIE_CATEGORIES = [
+  {
+    id: "necessary",
+    label: "Nezbytné",
+    description: "Zajišťují základní funkce webu a odeslání formuláře. Bez nich web nefunguje.",
+    locked: true,
+  },
+  {
+    id: "analytics",
+    label: "Analytické",
+    description: "Měří návštěvnost a chování na webu, abychom jej mohli zlepšovat (Google Analytics).",
+    locked: false,
+  },
+  {
+    id: "marketing",
+    label: "Marketingové",
+    description: "Umožňují cílení reklamy a remarketing na platformách Meta (Facebook, Instagram).",
+    locked: false,
+  },
+];
+
+function CookieConsent() {
+  const [visible, setVisible] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [choices, setChoices] = useState({ necessary: true, analytics: false, marketing: false });
+
+  useEffect(() => {
+    const stored = getStoredConsent();
+    if (!stored) {
+      setVisible(true);
+    } else {
+      setChoices({ necessary: true, analytics: Boolean(stored.analytics), marketing: Boolean(stored.marketing) });
+    }
+
+    const openHandler = () => {
+      const current = getStoredConsent();
+      if (current) setChoices({ necessary: true, analytics: Boolean(current.analytics), marketing: Boolean(current.marketing) });
+      setSettingsOpen(true);
+      setVisible(true);
+    };
+    window.addEventListener("open-cookie-settings", openHandler);
+    return () => window.removeEventListener("open-cookie-settings", openHandler);
+  }, []);
+
+  const acceptAll = () => {
+    const consent = { necessary: true, analytics: true, marketing: true };
+    storeConsent(consent);
+    setChoices(consent);
+    setVisible(false);
+    setSettingsOpen(false);
+  };
+
+  const rejectOptional = () => {
+    const consent = { necessary: true, analytics: false, marketing: false };
+    storeConsent(consent);
+    setChoices(consent);
+    setVisible(false);
+    setSettingsOpen(false);
+  };
+
+  const saveChoices = () => {
+    storeConsent(choices);
+    setVisible(false);
+    setSettingsOpen(false);
+  };
+
+  if (!visible) return null;
+
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-50 p-4 sm:p-6">
+      <div className="max-w-3xl mx-auto rounded-2xl border border-white/10 bg-zinc-950/95 backdrop-blur-xl shadow-2xl overflow-hidden">
+        {!settingsOpen ? (
+          <div className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+            <Cookie className="w-6 h-6 text-violet-400 shrink-0 hidden sm:block" />
+            <p className="text-sm text-zinc-300 leading-relaxed flex-1">
+              Používáme cookies pro základní fungování webu a se souhlasem i pro měření návštěvnosti a
+              marketing. Více v{" "}
+              <a href="#cookies" className="text-violet-300 hover:text-violet-200 underline underline-offset-2">
+                zásadách používání cookies
+              </a>
+              .
+            </p>
+            <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+              <button
+                onClick={() => setSettingsOpen(true)}
+                className="rounded-full border border-white/15 hover:border-violet-500/40 hover:bg-white/5 px-4 py-2.5 text-xs font-medium text-zinc-300 hover:text-white transition-colors"
+              >
+                Nastavení
+              </button>
+              <button
+                onClick={rejectOptional}
+                className="rounded-full border border-white/15 hover:border-violet-500/40 hover:bg-white/5 px-4 py-2.5 text-xs font-medium text-zinc-300 hover:text-white transition-colors"
+              >
+                Odmítnout volitelné
+              </button>
+              <button
+                onClick={acceptAll}
+                className="rounded-full bg-violet-600 hover:bg-violet-500 px-5 py-2.5 text-xs font-semibold text-white transition-colors shadow-lg shadow-violet-900/40"
+              >
+                Přijmout vše
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="p-5 sm:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-display text-base font-semibold text-white">Nastavení cookies</h3>
+              <button onClick={() => setSettingsOpen(false)} className="text-zinc-500 hover:text-white transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 mb-5">
+              {COOKIE_CATEGORIES.map((cat) => (
+                <div key={cat.id} className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-3.5">
+                  <button
+                    onClick={() => !cat.locked && setChoices((c) => ({ ...c, [cat.id]: !c[cat.id] }))}
+                    disabled={cat.locked}
+                    className={`mt-0.5 w-9 h-5 rounded-full shrink-0 transition-colors relative ${
+                      choices[cat.id] ? "bg-violet-600" : "bg-white/15"
+                    } ${cat.locked ? "opacity-60" : ""}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                        choices[cat.id] ? "translate-x-4" : "translate-x-0.5"
+                      }`}
+                    />
+                  </button>
+                  <div>
+                    <div className="text-sm font-medium text-white">
+                      {cat.label}
+                      {cat.locked && <span className="text-zinc-500 font-normal"> — vždy aktivní</span>}
+                    </div>
+                    <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">{cat.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={saveChoices}
+                className="rounded-full bg-violet-600 hover:bg-violet-500 px-5 py-2.5 text-xs font-semibold text-white transition-colors shadow-lg shadow-violet-900/40"
+              >
+                Uložit nastavení
+              </button>
+              <button
+                onClick={acceptAll}
+                className="rounded-full border border-white/15 hover:border-violet-500/40 hover:bg-white/5 px-4 py-2.5 text-xs font-medium text-zinc-300 hover:text-white transition-colors"
+              >
+                Přijmout vše
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ============================== FOOTER ============================== */
 
 function Footer() {
@@ -1079,12 +1508,18 @@ function Footer() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8 border-t border-white/10">
           <span className="text-xs text-zinc-600">© 2026 Progma. Všechna práva vyhrazena.</span>
           <div className="flex items-center gap-6 text-xs text-zinc-600">
-            <a href="#" className="hover:text-zinc-400 transition-colors">
+            <a href="#zasady-ochrany-udaju" className="hover:text-zinc-400 transition-colors">
               Zásady ochrany osobních údajů
             </a>
-            <a href="#" className="hover:text-zinc-400 transition-colors">
-              Obchodní podmínky
+            <a href="#cookies" className="hover:text-zinc-400 transition-colors">
+              Cookies
             </a>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("open-cookie-settings"))}
+              className="hover:text-zinc-400 transition-colors"
+            >
+              Nastavení cookies
+            </button>
           </div>
         </div>
       </div>
@@ -1094,17 +1529,44 @@ function Footer() {
 
 /* ============================== ROOT ============================== */
 
+function getPolicyView() {
+  const hash = window.location.hash.replace(/^#/, "");
+  if (hash === "zasady-ochrany-udaju") return "privacy";
+  if (hash === "cookies") return "cookies";
+  return null;
+}
+
 export default function App() {
+  const [view, setView] = useState(getPolicyView);
+
+  useEffect(() => {
+    const onHashChange = () => {
+      setView(getPolicyView());
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-body antialiased">
       <Navbar />
-      <Hero />
-      <ProblemSolution />
-      <WhyUs />
-      <Pricing />
-      <Team />
-      <Contact />
+      {view === "privacy" ? (
+        <PrivacyPolicyPage />
+      ) : view === "cookies" ? (
+        <CookiePolicyPage />
+      ) : (
+        <>
+          <Hero />
+          <ProblemSolution />
+          <WhyUs />
+          <Pricing />
+          <Team />
+          <Contact />
+        </>
+      )}
       <Footer />
+      <CookieConsent />
     </div>
   );
 }
