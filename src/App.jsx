@@ -1076,7 +1076,7 @@ function Contact() {
               <div className="space-y-5">
                 <div className="flex items-center gap-3">
                   <Phone className="w-4 h-4 text-violet-300" />
-                  <span className="text-sm text-zinc-300 font-jb">+420 722 269 263</span>
+                  <span className="text-sm text-zinc-300 font-jb">+420 799 012 211</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <Mail className="w-4 h-4 text-violet-300" />
