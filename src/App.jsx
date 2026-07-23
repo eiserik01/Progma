@@ -1454,12 +1454,12 @@ function CookieConsent() {
                   <button
                     onClick={() => !cat.locked && setChoices((c) => ({ ...c, [cat.id]: !c[cat.id] }))}
                     disabled={cat.locked}
-                    className={`mt-0.5 w-9 h-5 rounded-full shrink-0 transition-colors relative ${
-                      choices[cat.id] ? "bg-violet-600" : "bg-white/15"
-                    } ${cat.locked ? "opacity-60" : ""}`}
+                    className={`absolute left-0 top-0.5 w-6 h-6 rounded-full bg-white transition-transform ${
+                      choices[cat.id] ? "translate-x-[22px]" : "translate-x-0.5"
+                    }`}
                   >
                     <span
-                      className={`absolute left-0 top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                        className={`mt-0.5 w-12 h-7 rounded-full shrink-0 transition-colors relative ${
                         choices[cat.id] ? "translate-x-[18px]" : "translate-x-0.5"
                       }`}
                     />
@@ -1467,7 +1467,7 @@ function CookieConsent() {
                   <div>
                     <div className="text-sm font-medium text-white">
                       {cat.label}
-                      {cat.locked && <span className="text-zinc-500 font-normal"> — vždy aktivní</span>}
+                      {cat.locked && <span className="text-zinc-500 font-normal"></span>}
                     </div>
                     <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">{cat.description}</p>
                   </div>
