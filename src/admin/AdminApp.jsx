@@ -758,7 +758,7 @@ async function generateContractPdf(client) {
   para(`a ${SUPPLIER.coProvider.name}, IČO ${SUPPLIER.coProvider.ico}, se sídlem ${SUPPLIER.coProvider.address} (dále jen „Spolupracující poskytovatel“), společně dále jen „Poskytovatel“ nebo „Progma“.`);
   y += 1;
   setBold(9.5); doc.setTextColor(20, 20, 20); doc.text("Klient:", marginX, y); y += 5.5;
-  para(`${client.company}, IČO ${client.ico || "[DOPLŇTE]"}, DIČ [DOPLŇTE], se sídlem ${client.address || "[DOPLŇTE]"}, zastoupen: ${client.contact || "[DOPLŇTE]"} (dále jen „Klient“)`);
+  para(`${client.company}, IČO ${client.ico || "......................"}, DIČ ......................, se sídlem ${client.address || "......................"}, zastoupen: ${client.contact || "......................"} (dále jen „Klient“)`);
 
   heading("PREAMBULE A PRÁVNÍ POSTAVENÍ POSKYTOVATELE");
   para("A. Hlavní poskytovatel a Spolupracující poskytovatel jsou samostatnými podnikateli, kteří se za účelem společného poskytování marketingových služeb sdružili do společnosti podle § 2716 a násl. OZ vystupující pod nezapsanou obchodní značkou „Progma“ (dále jen „Společnost“). Společnost nemá právní osobnost; práva a povinnosti z této Smlouvy vznikají přímo oběma Poskytovatelům.");
@@ -859,7 +859,7 @@ async function generateContractPdf(client) {
   para("10.1 Smluvní strany prohlašují, že Smlouvu uzavírají v rámci své podnikatelské činnosti. Klient není spotřebitelem ani slabší smluvní stranou dle § 433 OZ.");
   para("10.2 Klient prohlašuje, že měl dostatečnou příležitost se s obsahem Smlouvy seznámit, byl na všechna ustanovení, která by pro něj mohla být neobvyklá — zejména čl. 4, 5.3, 6.2 a 7.2 — výslovně upozorněn a jejich význam mu byl vysvětlen; s těmito ustanoveními souhlasí. Ustanovení § 1799 a § 1800 OZ o adhezních smlouvách se neuplatní.");
   para("10.3 Klient přebírá nebezpečí změny okolností dle § 1765 odst. 2 OZ; nemůže se domáhat obnovení jednání o Smlouvě.");
-  para(`10.4 Právní jednání dle této Smlouvy lze činit e-mailem na adresy: Poskytovatel ${SUPPLIER.email}, Klient ${client.email || "[DOPLŇTE]"}. Zpráva se považuje za doručenou následující pracovní den po odeslání. Výpověď a odstoupení musí být doručeny doporučeně poštou nebo datovou schránkou.`);
+  para(`10.4 Právní jednání dle této Smlouvy lze činit e-mailem na adresy: Poskytovatel ${SUPPLIER.email}, Klient ${client.email || "......................"}. Zpráva se považuje za doručenou následující pracovní den po odeslání. Výpověď a odstoupení musí být doručeny doporučeně poštou nebo datovou schránkou.`);
   para("10.5 Je-li některé ustanovení neplatné či neúčinné, nedotýká se to ostatních; strany nahradí neplatné ustanovení novým, které nejlépe odpovídá jeho hospodářskému účelu.");
   para("10.6 Smlouvu lze měnit pouze písemnými číslovanými dodatky podepsanými oběma stranami. Změny Přílohy č. 1 (rozsah služeb) lze provést i potvrzenou e-mailovou dohodou.");
   para("10.7 Smlouva se řídí právem České republiky. K řešení sporů je místně příslušný soud podle sídla Hlavního poskytovatele (§ 89a o.s.ř.).");
@@ -885,7 +885,7 @@ async function generateContractPdf(client) {
   doc.addPage();
   y = 20;
   heading("PŘÍLOHA Č. 1 — SPECIFIKACE PLNĚNÍ A CENÍK", 13);
-  para(`Zvolený balíček: ${pkg ? pkg.name : "[DOPLŇTE]"}`, 10.5);
+  para(`Zvolený balíček: ${pkg ? pkg.name : "......................"}`, 10.5);
   y += 2;
   if (pkg) {
     setBold(9.5);
@@ -901,8 +901,8 @@ async function generateContractPdf(client) {
   tableRow("Zvýhodněná cena", `${formatKc(discountPrice)} / měsíc`, true);
   tableRow("Rozdíl (základ pro doplatek dle čl. 4)", `${formatKc(basePrice - discountPrice)} / měsíc`);
   y += 4;
-  para("Doporučený media budget (nezávazně): [DOPLŇTE] Kč / měsíc — hrazen Klientem přímo platformám.", 9);
-  para("Sazby za vícepráce: [DOPLŇTE] Kč / hodina, natáčecí den navíc [DOPLŇTE] Kč.", 9);
+  para("Doporučený media budget (nezávazně): ...................... Kč / měsíc — hrazen Klientem přímo platformám.", 9);
+  para("Sazby za vícepráce: ...................... Kč / hodina, natáčecí den navíc ...................... Kč.", 9);
 
   const filenameSafe = (client.company || "klient").replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
   doc.save(`smlouva-progma-${filenameSafe}.pdf`);
@@ -1682,7 +1682,7 @@ function ClientsView({ clients, insertClient, updateClient, removeClient, select
     setContractGenerating(true);
     try {
       await generateContractPdf(client);
-      showToast("Smlouva vygenerována — zkontrolujte pole [DOPLŇTE] před odesláním.");
+      showToast("Smlouva vygenerována — zkontrolujte pole ...................... před odesláním.");
     } catch (err) {
       console.error("Generování smlouvy selhalo:", err);
       showToast("Vygenerování smlouvy se nepovedlo.", "error");
