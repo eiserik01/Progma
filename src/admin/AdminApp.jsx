@@ -307,13 +307,13 @@ const INITIAL_CODES = [
 // už jsou vyplněné podle smlouvy.
 const SUPPLIER = {
   name: "Erik Eis",
-  address: "[DOPLŇTE — sídlo Erika]",
-  ico: "[DOPLŇTE IČO Erika]",
+  address: "Svážná 393/1, Brno 63400",
+  ico: "29754674",
   dic: "[DOPLŇTE DIČ, pokud je Erik plátcem DPH]",
   email: "info@progma.cz",
-  phone: "+420 722 269 263",
-  registry: "[DOPLŇTE — živnostenský úřad, kde je registrace vedena]",
-  bank: "[DOPLŇTE bankovní spojení]",
+  phone: "+420 799 012 211",
+  registry: "Živnostený úřad v Třebíči",
+  bank: "3686215017/3030",
   vatPayer: false,
   invoiceDay: "[DEN]",
   noticePeriodMonths: 2,
@@ -585,7 +585,7 @@ async function generateOrderPdf({ orderForm, pkg, commitment, appliedCode, baseP
   doc.line(120, y, 180, y);
   setNormal(8.5);
   doc.setTextColor(110, 110, 115);
-  doc.text("Za dodavatele — Progma s.r.o.", marginX, y + 5);
+  doc.text("Za dodavatele — Adam Kryštof", marginX, y + 5);
   doc.text("Za odběratele", 120, y + 5);
 
   const filenameSafe = (orderForm.company || "klient").replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();

@@ -1449,18 +1449,18 @@ function CookieConsent() {
             </div>
 
             <div className="space-y-3 mb-5">
-              {COOKIE_CATEGORIES.map((cat) => (
+            {COOKIE_CATEGORIES.map((cat) => (
                 <div key={cat.id} className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-3.5">
                   <button
                     onClick={() => !cat.locked && setChoices((c) => ({ ...c, [cat.id]: !c[cat.id] }))}
                     disabled={cat.locked}
-                    className={`absolute left-0 top-0.5 w-6 h-6 rounded-full bg-white transition-transform ${
-                      choices[cat.id] ? "translate-x-[22px]" : "translate-x-0.5"
-                    }`}
+                    className={`mt-0.5 w-12 h-7 rounded-full shrink-0 transition-colors relative ${
+                      choices[cat.id] ? "bg-violet-600" : "bg-white/15"
+                    } ${cat.locked ? "opacity-60" : ""}`}
                   >
                     <span
-                        className={`mt-0.5 w-12 h-7 rounded-full shrink-0 transition-colors relative ${
-                        choices[cat.id] ? "translate-x-[18px]" : "translate-x-0.5"
+                      className={`absolute left-0 top-0.5 w-6 h-6 rounded-full bg-white transition-transform ${
+                        choices[cat.id] ? "translate-x-[22px]" : "translate-x-0.5"
                       }`}
                     />
                   </button>
