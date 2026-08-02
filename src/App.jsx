@@ -39,7 +39,7 @@ import {
  * Bez vyplnění endpointu formulář zobrazí chybovou hlášku a poptávka se
  * nikam neodešle — nic se ale "nerozbije".
  */
-const FORM_ENDPOINT = "https://formspree.io/f/YOUR_FORM_ID";
+const FORM_ENDPOINT = "https://formspree.io/f/xdarvvvg";
 
 const NAV_LINKS = [
   { href: "#reseni", label: "Řešení" },
