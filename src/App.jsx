@@ -254,15 +254,23 @@ function GridTexture({ className = "" }) {
  *   call (with retries on canplay/loadeddata/visibilitychange) rather than
  *   relying on the autoPlay attribute alone, since mobile browsers silently
  *   drop that attribute more often than you'd expect.
+ * - If actual playback still hasn't started a couple seconds in — the
+ *   telltale sign of iOS Low Power Mode, which blocks <video> autoplay at
+ *   the OS level and which no amount of JS/CSS can override — we swap to
+ *   an animated WebP loop instead. It's technically an image, not a video
+ *   element, so that restriction doesn't apply to it; the hero still feels
+ *   alive instead of quietly freezing on the static poster.
  *
  * Drop your files in /public as:
- *   showreel.webm        (preferred, smaller)
- *   showreel.mp4          (fallback for browsers without webm support)
- *   showreel-poster.jpg   (first-frame still, shown before/without video)
+ *   showreel.webm            (preferred video format, smaller)
+ *   showreel.mp4              (video fallback for browsers without webm)
+ *   showreel-poster.jpg       (first-frame still, shown before/without video)
+ *   showreel-fallback.webp    (short animated loop, used if video won't autoplay)
  */
 function HeroVideoBackground() {
   const [showVideo, setShowVideo] = useState(false);
   const [posterError, setPosterError] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
   const videoRef = useRef(null);
 
   useEffect(() => {
@@ -289,10 +297,18 @@ function HeroVideoBackground() {
     video.addEventListener("canplay", tryPlay);
     video.addEventListener("loadeddata", tryPlay);
     document.addEventListener("visibilitychange", tryPlay);
+
+    // Give it a couple of seconds; if it's genuinely still not playing by
+    // then (not just still buffering), fall back to the animated WebP.
+    const fallbackTimer = setTimeout(() => {
+      if (video.paused) setVideoFailed(true);
+    }, 2500);
+
     return () => {
       video.removeEventListener("canplay", tryPlay);
       video.removeEventListener("loadeddata", tryPlay);
       document.removeEventListener("visibilitychange", tryPlay);
+      clearTimeout(fallbackTimer);
     };
   }, [showVideo]);
 
@@ -311,7 +327,7 @@ function HeroVideoBackground() {
         <div className="absolute inset-0 bg-gradient-to-br from-violet-950 via-zinc-950 to-zinc-950" />
       )}
 
-      {showVideo && (
+      {showVideo && !videoFailed && (
         <video
           ref={videoRef}
           className="absolute inset-0 w-full h-full object-cover object-top"
@@ -321,11 +337,19 @@ function HeroVideoBackground() {
           playsInline
           preload="auto"
           poster="/showreel-poster.jpg"
-          onError={() => setShowVideo(false)}
+          onError={() => setVideoFailed(true)}
         >
           <source src="/showreel.webm" type="video/webm" />
           <source src="/showreel.mp4" type="video/mp4" />
         </video>
+      )}
+
+      {showVideo && videoFailed && (
+        <img
+          src="/showreel-fallback.webp"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover object-top"
+        />
       )}
 
       {/* Scrim: violet-tinted so the video reads on-brand, still keeps the headline legible on the left */}
@@ -340,9 +364,26 @@ function Counter({ to, suffix = "", decimals = 0, duration = 1.8 }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "-80px" });
   const [value, setValue] = useState(0);
+  const startedRef = useRef(false);
 
   useEffect(() => {
-    if (!inView) return;
+    // Safety net: on some phones (notably iPhones in Low Power Mode) the
+    // IntersectionObserver behind useInView, or requestAnimationFrame
+    // itself, can be throttled and never fire promptly. Rather than risk
+    // the number sitting at "0" forever, jump straight to the correct
+    // final value if the animation hasn't started within ~1.2s.
+    const fallback = setTimeout(() => {
+      if (!startedRef.current) {
+        startedRef.current = true;
+        setValue(to);
+      }
+    }, 1200);
+    return () => clearTimeout(fallback);
+  }, [to]);
+
+  useEffect(() => {
+    if (!inView || startedRef.current) return;
+    startedRef.current = true;
     let raf;
     let start;
     const step = (ts) => {
@@ -471,7 +512,7 @@ function Hero() {
   const stats = [
     { icon: Zap, value: 14, suffix: "", label: "dní do spuštění kampaně" },
     { icon: MapPin, value: 1, suffix: "", label: "firma na obor a region" },
-    { icon: Clock, value: 100, suffix: " %", label: "vašeho času zpět do podnikání" },
+    { icon: Clock, value: 100, suffix: " %", label: "vašeho času zpět na řemeslo" },
   ];
 
   return (
@@ -1525,7 +1566,7 @@ function Footer() {
             <h4 className="font-jb text-xs uppercase tracking-wide text-zinc-500 mb-4">Kontakt</h4>
             <div className="space-y-3 text-sm text-zinc-400">
               <div>info@progma.cz</div>
-              <div>+420 722 269 263</div>
+              <div>+420 799 012 211</div>
               <div>Brno, Česká republika</div>
             </div>
           </div>
