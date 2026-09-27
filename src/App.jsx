@@ -1566,7 +1566,7 @@ function Footer() {
             <h4 className="font-jb text-xs uppercase tracking-wide text-zinc-500 mb-4">Kontakt</h4>
             <div className="space-y-3 text-sm text-zinc-400">
               <div>info@progma.cz</div>
-              <div>+420 799 012 211</div>
+              <div>+420 702 087 236</div>
               <div>Brno, Česká republika</div>
             </div>
           </div>
